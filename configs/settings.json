@@ -1,0 +1,24 @@
+{
+  "setup_completed": false,
+  "schedule": [],
+  "connection": {
+    "provider": "ldplayer",
+    "address": "",
+    "adb_path": "",
+    "touch_mode": "emulator"
+  },
+  "launch": {
+    "auto_start": false,
+    "minimize_on_start": false,
+    "auto_run_script": false,
+    "auto_run_script_name": "",
+    "auto_launch_emulator": false,
+    "emulator_path": "",
+    "instance_index": 0
+  },
+  "about": {
+    "version": "1.0.0",
+    "developer": "墨尔本的晴空",
+    "description": "雷电模拟器自动化框架"
+  }
+}

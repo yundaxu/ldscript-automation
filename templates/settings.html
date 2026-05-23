@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模拟器脚本自助 — 设置</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0d1117;
+        color: #c9d1d9;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .header {
+        background: #161b22;
+        padding: 0 24px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #21262d;
+        flex-shrink: 0;
+      }
+      .header h1 {
+        font-size: 20px;
+        color: #58a6ff;
+        letter-spacing: 2px;
+      }
+      .header .nav-links {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .header .nav-links a {
+        color: #8b949e;
+        text-decoration: none;
+        font-size: 13px;
+        transition: color 0.2s;
+      }
+      .header .nav-links a:hover,
+      .header .nav-links a.active {
+        color: #58a6ff;
+      }
+      .main {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+      }
+      .sidebar {
+        width: 200px;
+        min-width: 200px;
+        background: #161b22;
+        border-right: 1px solid #21262d;
+        padding: 12px 0;
+        overflow-y: auto;
+      }
+      .sidebar .menu-item {
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #8b949e;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+      }
+      .sidebar .menu-item:hover {
+        background: #21262d;
+        color: #c9d1d9;
+      }
+      .sidebar .menu-item.active {
+        background: rgba(88, 166, 255, 0.1);
+        color: #58a6ff;
+        border-left-color: #58a6ff;
+      }
+      .content {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        background: #0d1117;
+      }
+      .content h2 {
+        font-size: 18px;
+        color: #58a6ff;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #21262d;
+      }
+      .form-group {
+        margin-bottom: 16px;
+      }
+      .form-group label {
+        display: block;
+        font-size: 12px;
+        color: #8b949e;
+        margin-bottom: 4px;
+      }
+      .form-group .hint {
+        font-size: 10px;
+        color: #484f58;
+        margin-top: 2px;
+      }
+      select,
+      input[type="text"],
+      input[type="time"],
+      input[type="number"] {
+        background: #0d1117;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        padding: 7px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        width: 100%;
+        max-width: 400px;
+      }
+      select:focus,
+      input:focus {
+        outline: none;
+        border-color: #58a6ff;
+      }
+      .btn {
+        background: #238636;
+        color: #fff;
+        border: 1px solid #2ea043;
+        padding: 7px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #2ea043;
+      }
+      .btn.gray {
+        background: #21262d;
+        border-color: #30363d;
+        color: #8b949e;
+      }
+      .btn.gray:hover {
+        background: #30363d;
+        color: #c9d1d9;
+      }
+      .btn.red {
+        background: #da3633;
+        border-color: #f85149;
+      }
+      .btn.red:hover {
+        background: #f85149;
+      }
+      .btn.sm {
+        padding: 4px 10px;
+        font-size: 11px;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #21262d;
+      }
+      .toggle-row:last-child {
+        border-bottom: none;
+      }
+      .toggle-row .info {
+        flex: 1;
+      }
+      .toggle-row .info .title {
+        font-size: 13px;
+        color: #c9d1d9;
+      }
+      .toggle-row .info .desc {
+        font-size: 10px;
+        color: #484f58;
+        margin-top: 2px;
+      }
+      .toggle-switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #30363d;
+        border-radius: 24px;
+        transition: 0.3s;
+      }
+      .toggle-slider:before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background: #8b949e;
+        border-radius: 50%;
+        transition: 0.3s;
+      }
+      .toggle-switch input:checked + .toggle-slider {
+        background: #238636;
+      }
+      .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+        background: #fff;
+      }
+      .toggle-switch input:disabled + .toggle-slider {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .row-inline {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .row-inline select,
+      .row-inline input {
+        flex: 1;
+      }
+      .schedule-item {
+        background: #21262d;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .schedule-item input[type="time"] {
+        width: 100px;
+      }
+      .schedule-item select {
+        width: 140px;
+      }
+      .notice {
+        font-size: 12px;
+        padding: 8px 14px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        display: none;
+      }
+      .notice.ok {
+        background: rgba(35, 134, 54, 0.15);
+        color: #3fb950;
+        border: 1px solid #238636;
+        display: block;
+      }
+      .notice.err {
+        background: rgba(218, 54, 51, 0.15);
+        color: #f85149;
+        border: 1px solid #da3633;
+        display: block;
+      }
+      .about-card {
+        background: #21262d;
+        border-radius: 8px;
+        padding: 16px;
+        max-width: 400px;
+      }
+      .about-card .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #30363d;
+        font-size: 13px;
+      }
+      .about-card .row:last-child {
+        border-bottom: none;
+      }
+      .about-card .row .k {
+        color: #8b949e;
+      }
+      .file-pick {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .file-pick input {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 24px">
+        <h1>模拟器脚本自助</h1>
+        <div class="nav-links">
+          <a href="/">控制面板</a><a href="/editor">积木编辑器</a
+          ><a href="/settings" class="active">设置</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="sidebar">
+        <div
+          class="menu-item active"
+          data-section="schedule"
+          onclick="switchSection('schedule')"
+        >
+          ⏱ 定时执行
+        </div>
+        <div
+          class="menu-item"
+          data-section="connection"
+          onclick="switchSection('connection')"
+        >
+          🔌 连接设置
+        </div>
+        <div
+          class="menu-item"
+          data-section="launch"
+          onclick="switchSection('launch')"
+        >
+          🚀 启动设置
+        </div>
+        <div
+          class="menu-item"
+          data-section="about"
+          onclick="switchSection('about')"
+        >
+          ℹ 关于我们
+        </div>
+      </div>
+
+      <div class="content" id="content"></div>
+    </div>
+
+    <script>
+      var settings = {};
+      var allScripts = [];
+      var instances = [];
+      var loaded = false;
+      var workerStatus = { running: false, total_tasks: 0, enabled_tasks: 0 };
+
+      function api(method, path, body) {
+        return fetch(path, {
+          method: method,
+          headers: { "Content-Type": "application/json" },
+          body: body ? JSON.stringify(body) : undefined,
+        }).then(function (r) {
+          return r.json();
+        });
+      }
+
+      function showNotice(msg, type) {
+        var el = document.getElementById("notice");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "notice";
+          el.className = "notice";
+          document
+            .getElementById("content")
+            .insertBefore(el, document.getElementById("content").firstChild);
+        }
+        el.className = "notice " + (type || "ok");
+        el.textContent = msg;
+        setTimeout(function () {
+          el.style.display = "none";
+        }, 3000);
+      }
+
+      function switchSection(name) {
+        document.querySelectorAll(".sidebar .menu-item").forEach(function (m) {
+          m.classList.toggle("active", m.dataset.section === name);
+        });
+        var el = document.getElementById("content");
+        if (name === "schedule") el.innerHTML = renderSchedule();
+        else if (name === "connection") el.innerHTML = renderConnection();
+        else if (name === "launch") el.innerHTML = renderLaunch();
+        else if (name === "about") el.innerHTML = renderAbout();
+      }
+
+      var _defaults = {
+        setup_completed: true,
+        schedule: [],
+        connection: {
+          provider: "ldplayer",
+          address: "",
+          adb_path: "",
+          touch_mode: "emulator",
+        },
+        launch: {
+          auto_start: false,
+          minimize_on_start: false,
+          auto_run_script: false,
+          auto_run_script_name: "",
+          auto_launch_emulator: false,
+          emulator_path: "",
+          instance_index: 0,
+        },
+        about: {
+          version: "1.0.0",
+          developer: "墨尔本的晴空",
+          description: "雷电模拟器自动化框架",
+        },
+      };
+      var instances = [];
+
+      function loadSettings() {
+        return api("GET", "/api/settings")
+          .then(function (d) {
+            settings = {};
+            for (var k in _defaults) {
+              settings[k] = _defaults[k];
+            }
+            for (var k in d) {
+              if (_defaults[k] && typeof d[k] === "object") {
+                for (var k2 in d[k]) {
+                  settings[k][k2] = d[k][k2];
+                }
+              }
+            }
+            // Load scripts + instances + worker status in parallel
+            return Promise.all([
+              api("GET", "/api/scripts"),
+              api("GET", "/api/instances/status"),
+              api("GET", "/api/schedule/status"),
+            ]);
+          })
+          .then(function (res) {
+            var d2 = res[0],
+              d3 = res[1],
+              d4 = res[2];
+            allScripts = (d2.scripts || [])
+              .filter(function (s) {
+                return s.type === "script";
+              })
+              .map(function (s) {
+                return s.name;
+              });
+            instances = (d3.instances || []).map(function (s) {
+              return {
+                index: s.index,
+                running: s.running,
+                name: s.name || "实例 " + s.index,
+              };
+            });
+            workerStatus = d4;
+            loaded = true;
+            switchSection("schedule");
+          });
+      }
+
+      function saveSettings() {
+        return api("POST", "/api/settings", settings).then(function (d) {
+          if (d.success) showNotice("设置已保存");
+          else showNotice("保存失败: " + (d.error || "未知错误"), "err");
+        });
+      }
+
+      // ====== Schedule ======
+      function renderSchedule() {
+        var sch = settings.schedule || [];
+        var h = '<h2>⏱ 定时执行</h2><div id="notice"></div>';
+
+        // Worker status bar
+        var statusColor = workerStatus.running ? "#3fb950" : "#f85149";
+        var statusText = workerStatus.running ? "运行中" : "未启动";
+        var now = new Date();
+        var currentTime =
+          String(now.getHours()).padStart(2, "0") +
+          ":" +
+          String(now.getMinutes()).padStart(2, "0");
+        h +=
+          '<div style="background:#21262d;border-radius:8px;padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:16px">';
+        h +=
+          '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' +
+          statusColor +
+          '"></span><span style="font-size:13px">调度器: ' +
+          statusText +
+          "</span></div>";
+        h +=
+          '<span style="font-size:11px;color:#8b949e">当前时间: ' +
+          currentTime +
+          "</span>";
+        h +=
+          '<span style="font-size:11px;color:#8b949e">已启用: ' +
+          workerStatus.enabled_tasks +
+          "/" +
+          workerStatus.total_tasks +
+          "</span>";
+        h += "</div>";
+
+        h += '<div id="schedule-list">';
+        sch.forEach(function (s, i) {
+          h += renderScheduleItem(s, i);
+        });
+        h += "</div>";
+        h +=
+          '<div style="margin-top:16px"><button class="btn" onclick="addSchedule()">+ 添加定时任务</button> ';
+        h += '<button class="btn gray" onclick="saveSettings()">保存</button> ';
+        h +=
+          '<button class="btn" style="background:#1f6feb;border-color:#388bfd" onclick="triggerNow()">▶ 立即测试</button> ';
+        h +=
+          '<button class="btn gray sm" onclick="refreshWorkerStatus()">刷新状态</button></div>';
+        return h;
+      }
+
+      function renderScheduleItem(s, i) {
+        var scriptsOpt = allScripts
+          .map(function (n) {
+            return (
+              '<option value="' +
+              n +
+              '"' +
+              (s.script === n ? " selected" : "") +
+              ">" +
+              n +
+              "</option>"
+            );
+          })
+          .join("");
+        var instOpts = instances
+          .map(function (n) {
+            return (
+              '<option value="' +
+              n.index +
+              '"' +
+              (s.instance_index === n.index ? " selected" : "") +
+              ">实例 " +
+              n.index +
+              (n.name ? " - " + n.name : "") +
+              (n.running ? " (运行中)" : "") +
+              "</option>"
+            );
+          })
+          .join("");
+        return (
+          '<div class="schedule-item" style="flex-wrap:wrap">' +
+          '<label class="toggle-switch"><input type="checkbox" ' +
+          (s.enabled ? "checked" : "") +
+          ' onchange="settings.schedule[' +
+          i +
+          '].enabled=this.checked"><span class="toggle-slider"></span></label>' +
+          '<input type="time" value="' +
+          (s.time || "08:00") +
+          '" onchange="settings.schedule[' +
+          i +
+          '].time=this.value" style="width:90px">' +
+          '<select onchange="settings.schedule[' +
+          i +
+          '].repeat=this.value" style="width:70px"><option value="daily"' +
+          (s.repeat === "daily" ? " selected" : "") +
+          '>每天</option><option value="once"' +
+          (s.repeat === "once" ? " selected" : "") +
+          ">一次</option></select>" +
+          '<select onchange="settings.schedule[' +
+          i +
+          '].script=this.value" style="width:120px"><option value="">-- 选择脚本 --</option>' +
+          scriptsOpt +
+          "</select>" +
+          '<select onchange="settings.schedule[' +
+          i +
+          '].instance_index=parseInt(this.value)" style="width:130px"><option value="">-- 实例 --</option>' +
+          instOpts +
+          "</select>" +
+          '<label style="font-size:10px;color:#8b949e;display:flex;align-items:center;gap:3px"><input type="checkbox" ' +
+          (s.auto_launch ? "checked" : "") +
+          ' onchange="settings.schedule[' +
+          i +
+          '].auto_launch=this.checked">启动</label>' +
+          '<label style="font-size:10px;color:#8b949e;display:flex;align-items:center;gap:3px"><input type="checkbox" ' +
+          (s.auto_quit ? "checked" : "") +
+          ' onchange="settings.schedule[' +
+          i +
+          '].auto_quit=this.checked">完成后关闭</label>' +
+          '<button class="btn red sm" onclick="removeSchedule(' +
+          i +
+          ')">删除</button>' +
+          "</div>"
+        );
+      }
+
+      function addSchedule() {
+        var sched = settings.schedule || [];
+        sched.push({
+          enabled: false,
+          time: "08:00",
+          repeat: "daily",
+          script: allScripts[0] || "",
+          instance_index: instances[0] ? instances[0].index : 0,
+          auto_launch: false,
+          auto_quit: false,
+        });
+        settings.schedule = sched;
+        switchSection("schedule");
+      }
+
+      function removeSchedule(i) {
+        settings.schedule.splice(i, 1);
+        switchSection("schedule");
+      }
+
+      function triggerNow() {
+        if (!confirm("将立即执行所有已启用的定时任务，确定继续？")) return;
+        api("POST", "/api/schedule/trigger")
+          .then(function (d) {
+            if (d.triggered > 0) {
+              showNotice(
+                "已触发 " + d.triggered + " 个任务: " + d.tasks.join(", "),
+                "ok",
+              );
+            } else {
+              showNotice(d.message || "没有启用的任务", "err");
+            }
+          })
+          .catch(function (e) {
+            showNotice("触发失败: " + e, "err");
+          });
+      }
+
+      function refreshWorkerStatus() {
+        api("GET", "/api/schedule/status").then(function (d) {
+          workerStatus = d;
+          switchSection("schedule");
+        });
+      }
+
+      // ====== Connection ======
+      function renderConnection() {
+        var c = settings.connection || {};
+        var h = '<h2>🔌 连接设置</h2><div id="notice"></div>';
+        h +=
+          '<div class="form-group"><button class="btn" onclick="autoDetect()">🔍 自动检测连接</button></div>';
+
+        h += '<div class="form-group"><label>连接配置</label>';
+        h +=
+          '<select onchange="settings.connection.provider=this.value"><option value="ldplayer"' +
+          (c.provider === "ldplayer" ? " selected" : "") +
+          ">雷电模拟器</option></select>";
+        h +=
+          '<div class="hint">当前仅支持雷电模拟器，其他模拟器后续添加</div></div>';
+
+        h += '<div class="form-group"><label>连接地址</label>';
+        h +=
+          '<input type="text" value="' +
+          (c.address || "") +
+          '" onchange="settings.connection.address=this.value" placeholder="自动检测后填入，如 emulator-5554">';
+        h += '<div class="hint">ADB 连接地址，自动检测后填入</div></div>';
+
+        h += '<div class="form-group"><label>ADB 路径</label>';
+        h +=
+          '<div class="file-pick"><input type="text" id="adb-path" value="' +
+          (c.adb_path || "") +
+          '" onchange="settings.connection.adb_path=this.value" placeholder="自动检测后填入">';
+        h +=
+          '<button class="btn gray" onclick="pickFile(\'adb-path\')">选择</button></div>';
+        h += '<div class="hint">ADB 可执行文件路径</div></div>';
+
+        h += '<div class="form-group"><label>触控模式</label>';
+        h +=
+          '<select onchange="settings.connection.touch_mode=this.value"><option value="emulator"' +
+          (c.touch_mode === "emulator" ? " selected" : "") +
+          ">模拟器</option></select>";
+        h += '<div class="hint">当前仅支持模拟器触控</div></div>';
+
+        h +=
+          '<div style="margin-top:16px"><button class="btn" onclick="saveSettings()">保存</button></div>';
+        return h;
+      }
+
+      function autoDetect() {
+        showNotice("正在扫描系统进程检测连接...", "ok");
+        api("POST", "/api/settings/autodetect")
+          .then(function (d) {
+            if (d.success) {
+              settings.connection = settings.connection || {};
+              settings.connection.adb_path = d.adb_path || "";
+              settings.connection.provider = d.provider || "ldplayer";
+              if (d.address) settings.connection.address = d.address;
+              if (d.emulator_path) {
+                settings.launch = settings.launch || {};
+                settings.launch.emulator_path = d.emulator_path;
+              }
+              showNotice(
+                "检测成功: 模拟器=" +
+                  (d.emulator_path || "?") +
+                  " ADB=" +
+                  (d.adb_path || "?") +
+                  " 设备=" +
+                  (d.address || "未连接"),
+                "ok",
+              );
+              switchSection("connection");
+            } else {
+              showNotice("未检测到运行中的模拟器进程", "err");
+            }
+          })
+          .catch(function (e) {
+            showNotice("检测失败: " + e, "err");
+          });
+      }
+
+      function pickFile(id) {
+        var input = document.createElement("input");
+        input.type = "file";
+        input.onchange = function () {
+          if (this.files.length) {
+            var path = this.files[0].name;
+            document.getElementById(id).value = path;
+            if (id === "adb-path") settings.connection.adb_path = path;
+            else if (id === "emu-path") settings.launch.emulator_path = path;
+          }
+        };
+        input.click();
+      }
+
+      // ====== Launch ======
+      function renderLaunch() {
+        var l = settings.launch || {};
+        var scriptsOpt = allScripts
+          .map(function (n) {
+            return (
+              '<option value="' +
+              n +
+              '"' +
+              (l.auto_run_script_name === n ? " selected" : "") +
+              ">" +
+              n +
+              "</option>"
+            );
+          })
+          .join("");
+
+        var h = '<h2>🚀 启动设置</h2><div id="notice"></div>';
+
+        h +=
+          '<div class="toggle-row"><div class="info"><div class="title">开机自启动</div><div class="desc">系统启动时自动运行模拟器脚本自助</div></div>';
+        h +=
+          '<label class="toggle-switch"><input type="checkbox" ' +
+          (l.auto_start ? "checked" : "") +
+          ' onchange="settings.launch.auto_start=this.checked"><span class="toggle-slider"></span></label></div>';
+
+        h +=
+          '<div class="toggle-row"><div class="info"><div class="title">启动后最小化</div><div class="desc">启动后自动最小化到系统托盘</div></div>';
+        h +=
+          '<label class="toggle-switch"><input type="checkbox" ' +
+          (l.minimize_on_start ? "checked" : "") +
+          ' onchange="settings.launch.minimize_on_start=this.checked"><span class="toggle-slider"></span></label></div>';
+
+        h +=
+          '<div class="toggle-row"><div class="info"><div class="title">启动后运行脚本</div><div class="desc">启动后自动执行指定脚本</div></div>';
+        h +=
+          '<label class="toggle-switch"><input type="checkbox" ' +
+          (l.auto_run_script ? "checked" : "") +
+          ' onchange="settings.launch.auto_run_script=this.checked"><span class="toggle-slider"></span></label></div>';
+        h +=
+          '<div class="form-group"><select onchange="settings.launch.auto_run_script_name=this.value"><option value="">-- 选择脚本 --</option>' +
+          scriptsOpt +
+          "</select></div>";
+
+        h +=
+          '<div class="toggle-row"><div class="info"><div class="title">启动后开启模拟器</div><div class="desc">启动后自动启动模拟器实例' +
+          (l.emulator_path ? "" : " — 需先填写模拟器路径") +
+          "</div></div>";
+        h +=
+          '<label class="toggle-switch"><input type="checkbox" ' +
+          (l.auto_launch_emulator ? "checked" : "") +
+          " " +
+          (l.emulator_path ? "" : "disabled") +
+          ' onchange="settings.launch.auto_launch_emulator=this.checked"><span class="toggle-slider"></span></label></div>';
+
+        h += '<div class="form-group"><label>模拟器路径</label>';
+        h +=
+          '<div class="file-pick"><input type="text" id="emu-path" value="' +
+          (l.emulator_path || "") +
+          '" onchange="settings.launch.emulator_path=this.value;switchSection(\'launch\')" placeholder="例如: D:\\leidian\\LDPlayer9\\dnplayer.exe">';
+        h +=
+          '<button class="btn gray" onclick="pickFile(\'emu-path\')">选择</button></div></div>';
+
+        h += '<div class="form-group"><label>实例选择</label>';
+        h +=
+          '<select onchange="settings.launch.instance_index=parseInt(this.value)"><option value="0"' +
+          (l.instance_index === 0 ? " selected" : "") +
+          '>实例 0</option><option value="1"' +
+          (l.instance_index === 1 ? " selected" : "") +
+          '>实例 1</option><option value="2"' +
+          (l.instance_index === 2 ? " selected" : "") +
+          '>实例 2</option><option value="3"' +
+          (l.instance_index === 3 ? " selected" : "") +
+          ">实例 3</option></select></div>";
+
+        h +=
+          '<div style="margin-top:16px"><button class="btn" onclick="saveSettings()">保存</button></div>';
+        return h;
+      }
+
+      // ====== About ======
+      function renderAbout() {
+        var a = settings.about || {};
+        var h = "<h2>ℹ 关于我们</h2>";
+        h += '<div class="about-card">';
+        h +=
+          '<div class="row"><span class="k">软件名称</span><span>模拟器脚本自助</span></div>';
+        h +=
+          '<div class="row"><span class="k">版本</span><span>' +
+          (a.version || "1.0.0") +
+          "</span></div>";
+        h +=
+          '<div class="row"><span class="k">开发者</span><span>' +
+          (a.developer || "墨尔本的晴空") +
+          "</span></div>";
+        h +=
+          '<div class="row"><span class="k">描述</span><span>' +
+          (a.description || "雷电模拟器自动化框架") +
+          "</span></div>";
+        h +=
+          '<div class="row"><span class="k">框架</span><span>Flask + OpenCV + easyocr</span></div>';
+        h += "</div>";
+        return h;
+      }
+
+      // Init
+      loadSettings();
+    </script>
+  </body>
+</html>

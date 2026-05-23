@@ -1,0 +1,1652 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模拟器脚本自助 — 积木编辑器</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0d1117;
+        color: #c9d1d9;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .header {
+        background: #161b22;
+        padding: 0 24px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #21262d;
+        flex-shrink: 0;
+      }
+      .header .hdr-left {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .header h1 {
+        font-size: 20px;
+        color: #58a6ff;
+        letter-spacing: 2px;
+      }
+      .header .nav-links {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .header .nav-links a {
+        color: #8b949e;
+        text-decoration: none;
+        font-size: 13px;
+        transition: color 0.2s;
+      }
+      .header .nav-links a:hover,
+      .header .nav-links a.active {
+        color: #58a6ff;
+      }
+      .header .hdr-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .btn {
+        border: 1px solid #30363d;
+        padding: 7px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        background: #21262d;
+        color: #c9d1d9;
+      }
+      .btn:hover {
+        background: #30363d;
+      }
+      .btn.primary {
+        background: #238636;
+        border-color: #2ea043;
+        color: #fff;
+      }
+      .btn.primary:hover {
+        background: #2ea043;
+      }
+      .btn.green {
+        background: #1f6feb;
+        border-color: #1f6feb;
+        color: #fff;
+      }
+      .btn.green:hover {
+        background: #388bfd;
+      }
+      input[type="text"] {
+        padding: 6px 10px;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        font-size: 13px;
+        background: #0d1117;
+        color: #c9d1d9;
+        width: 180px;
+      }
+      .workspace {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+      .sidebar {
+        width: 200px;
+        min-width: 200px;
+        background: #161b22;
+        border-right: 1px solid #21262d;
+        overflow-y: auto;
+        padding: 10px;
+      }
+      .cat {
+        margin-bottom: 4px;
+      }
+      .cat-head {
+        padding: 7px 8px;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+        user-select: none;
+        color: #8b949e;
+      }
+      .cat-head:hover {
+        background: #21262d;
+      }
+      .cat-head .ar {
+        font-size: 9px;
+        transition: transform 0.2s;
+      }
+      .cat.open .ar {
+        transform: rotate(90deg);
+      }
+      .cat-blocks {
+        display: none;
+        padding-left: 6px;
+      }
+      .cat.open .cat-blocks {
+        display: block;
+      }
+      .bpal {
+        padding: 7px 8px;
+        margin: 2px 0;
+        border-radius: 4px;
+        cursor: grab;
+        font-size: 11px;
+        color: #fff;
+        font-weight: 500;
+        user-select: none;
+        text-align: center;
+      }
+      .bpal:hover {
+        transform: scale(1.04);
+      }
+      .bpal.motion {
+        background: #1f6feb;
+      }
+      .bpal.wait {
+        background: #8957e5;
+      }
+      .bpal.ctrl {
+        background: #da3633;
+      }
+      .bpal.app {
+        background: #238636;
+      }
+      .bpal.other {
+        background: #9e6a03;
+      }
+      .canvas-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .canvas {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        min-height: 200px;
+        background: #0d1117;
+        border: 2px dashed transparent;
+      }
+      #blocks {
+        min-height: 70vh;
+      }
+      .canvas.drag-over {
+        border-color: #58a6ff;
+      }
+      .canvas-empty {
+        color: #484f58;
+        text-align: center;
+        padding: 40px;
+        font-size: 14px;
+      }
+      .wsb {
+        position: relative;
+        padding: 10px 14px;
+        margin: 4px 0;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        max-width: 600px;
+        cursor: grab;
+        user-select: none;
+      }
+      .wsb input,
+      .wsb select {
+        cursor: auto;
+        user-select: text;
+      }
+      .wsb.motion {
+        background: #1f6feb;
+      }
+      .wsb.wait {
+        background: #8957e5;
+      }
+      .wsb.ctrl {
+        background: #da3633;
+      }
+      .wsb.app {
+        background: #238636;
+      }
+      .wsb.other {
+        background: #9e6a03;
+      }
+      .wsb input {
+        width: 58px;
+        padding: 3px 6px;
+        border: none;
+        border-radius: 3px;
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        outline: none;
+      }
+      .wsb input.wide {
+        width: 150px;
+      }
+      .wsb .del {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #30363d;
+        color: #8b949e;
+        border: 1px solid #484f58;
+        cursor: pointer;
+        font-size: 10px;
+        line-height: 16px;
+        text-align: center;
+        z-index: 1;
+      }
+      .wsb .del:hover {
+        background: #da3633;
+        color: #fff;
+        border-color: #da3633;
+      }
+      .drag-clone {
+        cursor: grabbing;
+      }
+      .wsb.drag-origin {
+        box-shadow:
+          0 -3px 0 rgba(255, 255, 255, 0.85),
+          0 3px 0 rgba(255, 255, 255, 0.85);
+      }
+      .drop-indicator {
+        height: 3px;
+        background: #ffffff;
+        border-radius: 2px;
+        margin: 2px 0;
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+        pointer-events: none;
+      }
+      .wsb .lbl {
+        opacity: 0.85;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .wsloop {
+        border: 2px dashed #da3633;
+        border-radius: 8px;
+        padding: 6px 10px 10px;
+        margin: 6px 0;
+      }
+      .wsbranch {
+        border: 2px dashed #d29922;
+        border-radius: 8px;
+        padding: 6px 10px 10px;
+        margin: 6px 0;
+      }
+      .wsbranch .branch-hdr {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .wsbranch .branch-body {
+        display: flex;
+        gap: 8px;
+      }
+      .wsbranch .branch-col {
+        flex: 1;
+        min-width: 100px;
+        min-height: 40px;
+        border-radius: 6px;
+        padding: 6px 8px 2px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px dashed transparent;
+      }
+      .wsbranch .branch-col.drag-over {
+        border-color: #d29922;
+        background: rgba(210, 153, 34, 0.1);
+      }
+      .wsbranch .branch-col h4 {
+        font-size: 11px;
+        color: #d29922;
+        margin-bottom: 4px;
+      }
+      .ws-children {
+        margin-left: 20px;
+        min-height: 36px;
+      }
+      .addb {
+        margin-top: 6px;
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .addb button {
+        font-size: 10px;
+        padding: 3px 7px;
+        border-radius: 3px;
+        border: none;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.12);
+        color: #c9d1d9;
+      }
+      .addb button:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      .preview-panel {
+        width: 340px;
+        min-width: 340px;
+        background: #0d1117;
+        border-left: 1px solid #21262d;
+        display: flex;
+        flex-direction: column;
+      }
+      .preview-hdr {
+        padding: 10px 14px;
+        font-size: 12px;
+        color: #8b949e;
+        background: #161b22;
+        border-bottom: 1px solid #21262d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .preview-code {
+        flex: 1;
+        padding: 14px;
+        overflow-y: auto;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.7;
+        color: #c9d1d9;
+        white-space: pre-wrap;
+      }
+      .save-notice {
+        font-size: 11px;
+        color: #3fb950;
+        margin-left: 8px;
+        display: none;
+      }
+      .run-output {
+        background: #0d1117;
+        border-top: 1px solid #21262d;
+        max-height: 180px;
+        overflow-y: auto;
+        padding: 10px 14px;
+        font-family: Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        display: none;
+      }
+      .run-output.show {
+        display: block;
+      }
+      .run-output .r-log {
+        color: #c9d1d9;
+      }
+      .run-output .r-err {
+        color: #f85149;
+      }
+      .run-output .r-ok {
+        color: #3fb950;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="hdr-left">
+        <h1>模拟器脚本自助</h1>
+        <div class="nav-links">
+          <a href="/">控制面板</a>
+          <a href="/editor" class="active">积木编辑器</a>
+          <a href="/settings">设置</a>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <input type="text" id="sn" placeholder="脚本名称" value="my_script" />
+        <button class="btn primary" onclick="doSave()">保存</button>
+        <button class="btn" onclick="doLoad()">加载</button>
+        <button class="btn" onclick="doNew()">新建</button>
+        <button class="btn green" id="run-btn" onclick="doRun()">
+          ▶ 测试运行
+        </button>
+        <span class="save-notice" id="notice"></span>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div class="sidebar" id="sidebar"></div>
+      <div class="canvas-wrap">
+        <div
+          class="canvas"
+          id="canvas"
+          ondragover="
+            event.preventDefault();
+            this.classList.add('drag-over');
+          "
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="onDrop(event)"
+        >
+          <div class="canvas-empty" id="empty">从左侧拖拽积木到这里 →</div>
+          <div id="blocks" data-list="root"></div>
+        </div>
+        <div class="run-output" id="run-out"></div>
+      </div>
+      <div class="preview-panel">
+        <div class="preview-hdr">Python 预览</div>
+        <div class="preview-code" id="preview"># 加载积木后自动生成代码</div>
+      </div>
+    </div>
+
+    <script>
+      const B = {
+        motion: [
+          {
+            t: "Click",
+            l: "",
+            p: [
+              { n: "x", d: 540 },
+              { n: "y", d: 960 },
+            ],
+          },
+          {
+            t: "LongPress",
+            l: "",
+            p: [
+              { n: "x", d: 540 },
+              { n: "y", d: 960 },
+              { n: "dur", d: 1000 },
+            ],
+          },
+          {
+            t: "Swipe",
+            l: "",
+            p: [
+              { n: "x1", d: 100 },
+              { n: "y1", d: 800 },
+              { n: "x2", d: 100 },
+              { n: "y2", d: 300 },
+            ],
+          },
+          { t: "TapFound", l: "点击找到的位置", p: [], hidden: 1 },
+          { t: "Back", l: "返回键", p: [] },
+          { t: "Home", l: "主页键", p: [] },
+        ],
+        wait: [{ t: "Wait", l: "", p: [{ n: "sec", d: 2 }] }],
+        ctrl: [
+          { t: "Loop", l: "重复", p: [{ n: "n", d: 3 }], kids: 1 },
+          {
+            t: "If",
+            l: "如果发现模板",
+            p: [
+              { n: "tmpl", d: "icon", txt: 1 },
+              { n: "th", d: 0.8 },
+              { n: "x1", d: 0 },
+              { n: "y1", d: 0 },
+              { n: "x2", d: 0 },
+              { n: "y2", d: 0 },
+            ],
+            kids: 1,
+          },
+          {
+            t: "OcrIf",
+            l: "如果发现文字",
+            p: [
+              { n: "text", d: "确定", txt: 1 },
+              { n: "x1", d: 0 },
+              { n: "y1", d: 0 },
+              { n: "x2", d: 0 },
+              { n: "y2", d: 0 },
+            ],
+            kids: 1,
+          },
+          { t: "Continue", l: "跳过本次循环", p: [], hidden: 1 },
+          { t: "Break", l: "跳出循环", p: [], hidden: 1 },
+        ],
+        app: [
+          {
+            t: "StartApp",
+            l: "启动",
+            p: [{ n: "pkg", d: "com.example.app", txt: 1 }],
+          },
+          {
+            t: "StopApp",
+            l: "停止",
+            p: [{ n: "pkg", d: "com.example.app", txt: 1 }],
+          },
+        ],
+        other: [
+          { t: "Screencap", l: "截图", p: [] },
+          { t: "Shell", l: "", p: [{ n: "cmd", d: "echo hello", txt: 1 }] },
+          { t: "OCR", l: "OCR 识别", p: [], hidden: 1 },
+        ],
+      };
+      const CATMAP = {
+        motion: "动作",
+        wait: "等待",
+        ctrl: "控制",
+        app: "应用",
+        other: "其他",
+      };
+      const COLS = {
+        Click: "motion",
+        LongPress: "motion",
+        Swipe: "motion",
+        TapFound: "motion",
+        Back: "motion",
+        Home: "motion",
+        Wait: "wait",
+        Loop: "ctrl",
+        If: "ctrl",
+        OcrIf: "ctrl",
+        Continue: "ctrl",
+        Break: "ctrl",
+        StartApp: "app",
+        StopApp: "app",
+        Screencap: "other",
+        Shell: "other",
+        OCR: "other",
+      };
+      let wb = [],
+        cid = 0;
+
+      function $(id) {
+        return document.getElementById(id);
+      }
+
+      function bldSidebar() {
+        let h = "";
+        for (const [cat, name] of Object.entries(CATMAP)) {
+          h += `<div class="cat open"><div class="cat-head" onclick="this.parentElement.classList.toggle('open')"><span class="ar">▶</span>${name}</div><div class="cat-blocks">`;
+          for (const b of B[cat]) {
+            if (b.hidden) continue;
+            h += `<div class="bpal ${cat}" draggable="true" ondragstart="dragPalette(event,'${b.t}')">${paletteLabel(b)}</div>`;
+          }
+          h += `</div></div>`;
+        }
+        $("sidebar").innerHTML = h;
+      }
+
+      function paletteLabel(d) {
+        switch (d.t) {
+          case "Click":
+            return "点击 X Y";
+          case "LongPress":
+            return "长按 X Y ms";
+          case "Swipe":
+            return "滑动 X1Y1→X2Y2";
+          case "Wait":
+            return "等待 N 秒";
+          case "Loop":
+            return "重复 N 次";
+          case "If":
+            return "如果发现图片";
+          case "OcrIf":
+            return "如果发现文字";
+          case "StartApp":
+            return "启动应用";
+          case "StopApp":
+            return "停止应用";
+          case "Shell":
+            return "Shell 命令";
+          case "OCR":
+            return "OCR 识别";
+          case "TapFound":
+            return "点击找到的位置";
+          case "Continue":
+            return "跳过本次循环";
+          case "Break":
+            return "跳出循环";
+          default:
+            return d.l || d.t;
+        }
+      }
+
+      function dragPalette(e, t) {
+        e.dataTransfer.setData("text", t);
+        e.dataTransfer.effectAllowed = "copy";
+      }
+
+      function findDef(t) {
+        for (const cat of Object.values(B))
+          for (const b of cat) if (b.t === t) return b;
+        return null;
+      }
+      function findB(list, id) {
+        for (const b of list) {
+          if (b.id === id) return b;
+          if (b.children && findB(b.children, id)) return findB(b.children, id);
+          if (b.then && findB(b.then, id)) return findB(b.then, id);
+          if (b.else_ && findB(b.else_, id)) return findB(b.else_, id);
+        }
+        return null;
+      }
+      function remList(list, id) {
+        return list.filter((b) => {
+          if (b.id === id) return !1;
+          if (b.children) b.children = remList(b.children, id);
+          if (b.then) b.then = remList(b.then, id);
+          if (b.else_) b.else_ = remList(b.else_, id);
+          return !0;
+        });
+      }
+      function allIds(list) {
+        let ids = [];
+        for (const b of list) {
+          ids.push(b.id);
+          if (b.children) ids = ids.concat(allIds(b.children));
+          if (b.then) ids = ids.concat(allIds(b.then));
+          if (b.else_) ids = ids.concat(allIds(b.else_));
+        }
+        return ids;
+      }
+
+      // addBlock now respects explicit branch target via _dropBranch
+      function addBlock(def, pid, branch, insIdx) {
+        const b = { id: ++cid, type: def.t, params: {} };
+        for (const p of def.p || []) b.params[p.n] = p.d;
+        if (def.kids) {
+          b.children = [];
+          b.then = undefined;
+          b.else_ = undefined;
+        }
+        if (def.t === "If" || def.t === "OcrIf") {
+          b.children = [];
+          b.then = [];
+          b.else_ = [];
+        }
+        if (pid) {
+          const p = findB(wb, pid);
+          if (p) {
+            if (p.type === "If" || p.type === "OcrIf") {
+              if (branch === "else") {
+                p.else_ = p.else_ || [];
+                if (insIdx != null) p.else_.splice(insIdx, 0, b);
+                else p.else_.push(b);
+              } else {
+                p.then = p.then || [];
+                if (insIdx != null) p.then.splice(insIdx, 0, b);
+                else p.then.push(b);
+              }
+            } else {
+              p.children = p.children || [];
+              if (insIdx != null) p.children.splice(insIdx, 0, b);
+              else p.children.push(b);
+            }
+          }
+        } else {
+          if (insIdx != null) wb.splice(insIdx, 0, b);
+          else wb.push(b);
+        }
+        render();
+      }
+
+      function onDrop(e) {
+        e.preventDefault();
+        $("canvas").classList.remove("drag-over");
+        clearDropLine();
+        const t = e.dataTransfer.getData("text");
+        if (!t) return;
+        const d = findDef(t);
+        if (!d) return;
+
+        var tgt = resolveDropTarget(e);
+        if (!tgt) { addBlock(d, null); return; }
+
+        var branch = null;
+        if (tgt.ltype === "then") branch = "then";
+        else if (tgt.ltype === "else") branch = "else";
+        else if (tgt.ltype === "children") branch = null; // Loop children
+
+        addBlock(d, tgt.pid, branch, tgt.idx);
+      }
+
+      function render() {
+        $("empty").style.display = wb.length ? "none" : "block";
+        $("blocks").innerHTML = rlist(wb);
+        compile();
+      }
+      function rlist(list) {
+        return list.map((b) => rblockTop(b)).join("");
+      }
+      function rblockTop(b) {
+        if (b.type === "Loop") return renderLoop(b);
+        if (b.type === "If" || b.type === "OcrIf") return renderIf(b);
+        return renderSimple(b);
+      }
+
+      function renderSimple(b) {
+        const cls = COLS[b.type] || "other";
+        return `<div class="wsb ${cls}" data-id="${b.id}">${blockHTML(b)}<button class="del" onclick="event.stopPropagation();rem(${b.id})">×</button></div>`;
+      }
+
+      function renderLoop(b) {
+        const cls = COLS[b.type] || "other";
+        const allDefs = [];
+        for (const cat of Object.values(B))
+          for (const cb of cat) allDefs.push(cb);
+        const btns = allDefs
+          .map(
+            (cb) =>
+              `<button onclick="addBlock(${JSON.stringify(cb).replace(/"/g, "&quot;")},${b.id})">+ ${cb.l || paletteLabel(cb)}</button>`,
+          )
+          .join("");
+        const n = b.params.n != null ? b.params.n : 3;
+        const label = n == 0 ? "无限" : n + " 次";
+        return `<div class="wsloop" _b='${JSON.stringify(b).replace(/'/g, "&#39;")}'><div class="wsb ${cls}" data-id="${b.id}"><span>🔁 重复 <input type="number" value="${n}" min="0" onchange="var v=parseInt(this.value)||0;up(${b.id},'n',v);this.nextSibling.textContent=v==0?'　无限':('　'+v+' 次')">${label}</span><button class="del" onclick="event.stopPropagation();rem(${b.id})">×</button></div><div class="ws-children" data-pid="${b.id}" data-list="children">${rlist(b.children || [])}</div><div class="addb">${btns}</div></div>`;
+      }
+
+      function renderIf(b) {
+        const cls = COLS[b.type] || "other";
+        const isTemplate = b.type === "If";
+        // Template dropdown
+        const tmplSelect = isTemplate
+          ? `<select style="background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:3px 6px;font-size:12px;min-width:100px" onchange="up(${b.id},'tmpl',this.value)" id="tmpl-sel-${b.id}"></select>`
+          : "";
+        const thInput = isTemplate
+          ? ` <span class="lbl" style="font-size:10px">相似度</span> <input type="number" style="width:45px" value="${b.params.th || 0.8}" min="0" max="1" step="0.05" onchange="up(${b.id},'th',this.value)">`
+          : "";
+        const roiInputs = `<span class="lbl" style="font-size:10px">区域</span>${regionDD(b.id, b.params.x1 || 0, b.params.y1 || 0, b.params.x2 || 0, b.params.y2 || 0)}`;
+        const headerHTML = isTemplate
+          ? `<span>🔍 图片</span>${tmplSelect}${thInput}`
+          : `<span>🔤 文字 <input type="text" class="wide" value="${b.params.text || "确定"}" onchange="up(${b.id},'text',this.value)"></span>`;
+        const allDefs = [];
+        for (const cat of Object.values(B))
+          for (const cb of cat) allDefs.push(cb);
+        const btnsT = allDefs
+          .map(
+            (cb) =>
+              `<button onclick="addBlock(${JSON.stringify(cb).replace(/"/g, "&quot;")},${b.id},'then')">+ ${cb.l || paletteLabel(cb)}</button>`,
+          )
+          .join("");
+        const btnsE = allDefs
+          .map(
+            (cb) =>
+              `<button onclick="addBlock(${JSON.stringify(cb).replace(/"/g, "&quot;")},${b.id},'else')">+ ${cb.l || paletteLabel(cb)}</button>`,
+          )
+          .join("");
+        const html = `<div class="wsbranch" _b='${JSON.stringify(b).replace(/'/g, "&#39;")}'><div class="branch-hdr"><div class="wsb ${cls}" data-id="${b.id}">${headerHTML}<button class="del" onclick="event.stopPropagation();rem(${b.id})">×</button></div></div><div style="font-size:10px;color:#8b949e">${roiInputs}</div><div class="branch-body"><div class="branch-col then" data-pid="${b.id}" data-list="then"><h4>✓ 找到时</h4>${rlist(b.then || [])}<div class="addb">${btnsT}</div></div><div class="branch-col else" data-pid="${b.id}" data-list="else"><h4>✗ 未找到</h4>${rlist(b.else_ || [])}<div class="addb">${btnsE}</div></div></div></div>`;
+        // Populate template dropdown after DOM update
+        if (isTemplate)
+          setTimeout(function () {
+            populateTmplSelect(b.id, b.params.tmpl);
+          }, 0);
+        return html;
+      }
+
+      // Coordinate cache for dropdowns
+      var coordCache = { points: {}, regions: {} };
+      function loadCoords() {
+        fetch("/api/coordinates")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            coordCache = d;
+            render();
+          });
+      }
+
+      // Region dropdown for If/OcrIf blocks — single dropdown + 4 coordinate inputs
+      function regionDD(bid, x1, y1, x2, y2) {
+        var curName = null;
+        for (var n in coordCache.regions) {
+          var r = coordCache.regions[n];
+          if (r.x1 == x1 && r.y1 == y1 && r.x2 == x2 && r.y2 == y2) {
+            curName = n;
+            break;
+          }
+        }
+        var regOpts = '<option value="__unsaved__">-- 自定义 --</option>';
+        for (var n in coordCache.regions) {
+          var r = coordCache.regions[n];
+          regOpts +=
+            '<option value="rg:' +
+            n +
+            '">📐' +
+            n +
+            " (" +
+            r.x1 +
+            "," +
+            r.y1 +
+            ")-(" +
+            r.x2 +
+            "," +
+            r.y2 +
+            ")</option>";
+        }
+        if (curName) {
+          return (
+            '<span style="color:#58a6ff;font-size:11px">📐 ' +
+            curName +
+            "</span>" +
+            ' X1<input type="number" readonly style="width:48px;background:rgba(33,38,45,1);color:#58a6ff;border:1px solid #30363d;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+            x1 +
+            '">' +
+            ' Y1<input type="number" readonly style="width:48px;background:rgba(33,38,45,1);color:#58a6ff;border:1px solid #30363d;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+            y1 +
+            '">' +
+            ' X2<input type="number" readonly style="width:48px;background:rgba(33,38,45,1);color:#58a6ff;border:1px solid #30363d;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+            x2 +
+            '">' +
+            ' Y2<input type="number" readonly style="width:48px;background:rgba(33,38,45,1);color:#58a6ff;border:1px solid #30363d;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+            y2 +
+            '">' +
+            '<select style="background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;padding:2px 4px;font-size:10px;width:30px" onchange="regionDDChange(' +
+            bid +
+            ',this)"><option value="">↻</option>' +
+            regOpts +
+            "</select>"
+          );
+        }
+        return (
+          "📐" +
+          ' X1<input type="number" style="width:48px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+          x1 +
+          '" onchange="up(' +
+          bid +
+          ",'x1',this.value)\">" +
+          ' Y1<input type="number" style="width:48px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+          y1 +
+          '" onchange="up(' +
+          bid +
+          ",'y1',this.value)\">" +
+          ' X2<input type="number" style="width:48px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+          x2 +
+          '" onchange="up(' +
+          bid +
+          ",'x2',this.value)\">" +
+          ' Y2<input type="number" style="width:48px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+          y2 +
+          '" onchange="up(' +
+          bid +
+          ",'y2',this.value)\">" +
+          '<select style="background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;padding:2px 4px;font-size:11px;max-width:180px" onchange="regionDDChange(' +
+          bid +
+          ',this)">' +
+          regOpts +
+          "</select>"
+        );
+      }
+      function regionDDChange(bid, sel) {
+        var v = sel.value;
+        if (v.startsWith("rg:")) {
+          var rg = coordCache.regions[v.substring(3)];
+          if (!rg) return;
+          up(bid, "x1", rg.x1);
+          up(bid, "y1", rg.y1);
+          up(bid, "x2", rg.x2);
+          up(bid, "y2", rg.y2);
+          render();
+        } else {
+          up(bid, "x1", 0);
+          up(bid, "y1", 0);
+          up(bid, "x2", 0);
+          up(bid, "y2", 0);
+          render();
+        }
+      }
+
+      // Generate coordinate dropdown HTML.
+      // mode: "point"=only saved points, "region"=only regions, "all"=both
+      function coordDD(blockId, paramX, paramY, valX, valY, mode) {
+        var currentName = findCoordName(paramX, paramY, valX, valY, mode);
+        var icon = mode === "region" ? "📐 " : mode === "point" ? "📍 " : "";
+        // When matched: show readonly inputs + change button
+        if (currentName) {
+          var chgOpts = '<option value="__unsaved__">-- 自定义 --</option>';
+          if (mode !== "region") {
+            for (var n in coordCache.points) {
+              var p = coordCache.points[n];
+              chgOpts +=
+                '<option value="pt:' +
+                n +
+                '">📍' +
+                n +
+                " (" +
+                p.x +
+                "," +
+                p.y +
+                ")</option>";
+            }
+          }
+          if (mode !== "point") {
+            for (var n in coordCache.regions) {
+              var r = coordCache.regions[n];
+              chgOpts +=
+                '<option value="rg:' +
+                n +
+                '">📐' +
+                n +
+                " (" +
+                r.x1 +
+                "," +
+                r.y1 +
+                ")-(" +
+                r.x2 +
+                "," +
+                r.y2 +
+                ")</option>";
+            }
+          }
+          return (
+            icon +
+            'X<input type="number" readonly style="width:50px;background:rgba(33,38,45,1);color:#58a6ff;border:1px solid #30363d;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+            valX +
+            '">' +
+            ' Y<input type="number" readonly style="width:50px;background:rgba(33,38,45,1);color:#58a6ff;border:1px solid #30363d;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+            valY +
+            '">' +
+            '<span style="color:#58a6ff;font-size:11px">' +
+            currentName +
+            "</span>" +
+            '<select style="background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;padding:2px 4px;font-size:10px;width:30px" onchange="coordDDChange(' +
+            blockId +
+            ",'" +
+            paramX +
+            "','" +
+            paramY +
+            "','" +
+            mode +
+            '\',this)"><option value="">↻</option>' +
+            chgOpts +
+            "</select>"
+          );
+        }
+        // Unmatched: editable inputs + dropdown to pick saved
+        var opts = '<option value="__unsaved__">-- 自定义 --</option>';
+        if (mode !== "region") {
+          for (var n in coordCache.points) {
+            var p = coordCache.points[n];
+            opts +=
+              '<option value="pt:' +
+              n +
+              '">📍' +
+              n +
+              " (" +
+              p.x +
+              "," +
+              p.y +
+              ")</option>";
+          }
+        }
+        if (mode !== "point") {
+          for (var n in coordCache.regions) {
+            var r = coordCache.regions[n];
+            opts +=
+              '<option value="rg:' +
+              n +
+              '">📐' +
+              n +
+              " (" +
+              r.x1 +
+              "," +
+              r.y1 +
+              ")-(" +
+              r.x2 +
+              "," +
+              r.y2 +
+              ")</option>";
+          }
+        }
+        return (
+          icon +
+          'X<input type="number" style="width:50px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+          valX +
+          '" onchange="up(' +
+          blockId +
+          ",'" +
+          paramX +
+          "',this.value)\">" +
+          ' Y<input type="number" style="width:50px;background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:3px;padding:2px 4px;font-size:12px" value="' +
+          valY +
+          '" onchange="up(' +
+          blockId +
+          ",'" +
+          paramY +
+          "',this.value)\">" +
+          '<select style="background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;padding:2px 4px;font-size:11px;max-width:160px" onchange="coordDDChange(' +
+          blockId +
+          ",'" +
+          paramX +
+          "','" +
+          paramY +
+          "','" +
+          mode +
+          "',this)\">" +
+          opts +
+          "</select>"
+        );
+      }
+
+      function findCoordName(px, py, vx, vy, mode) {
+        if (mode !== "region") {
+          for (var n in coordCache.points) {
+            var p = coordCache.points[n];
+            if (p.x == vx && p.y == vy) return "📍" + n;
+          }
+        }
+        if (mode !== "point") {
+          for (var n in coordCache.regions) {
+            var r = coordCache.regions[n];
+            if ((r.x1 == vx && r.y1 == vy) || (r.x2 == vx && r.y2 == vy))
+              return "📐" + n;
+          }
+        }
+        return null;
+      }
+
+      function coordDDChange(id, px, py, mode, sel) {
+        var b = findB(wb, id);
+        if (!b) return;
+        var v = sel.value;
+        if (v.startsWith("pt:")) {
+          var pt = coordCache.points[v.substring(3)];
+          if (!pt) return;
+          up(id, px, pt.x);
+          up(id, py, pt.y);
+          render();
+        } else if (v.startsWith("rg:")) {
+          var rg = coordCache.regions[v.substring(3)];
+          if (!rg) return;
+          up(id, "x1", rg.x1);
+          up(id, "y1", rg.y1);
+          up(id, "x2", rg.x2);
+          up(id, "y2", rg.y2);
+          render();
+        } else {
+          // __unsaved__ → reset to 0,0 to trigger custom input mode
+          up(id, px, 0);
+          up(id, py, 0);
+          render();
+        }
+      }
+
+      function blockHTML(b) {
+        switch (b.type) {
+          case "Click":
+            return `<span class="lbl">👆 点击</span>${coordDD(b.id, "x", "y", b.params.x, b.params.y, "point")}`;
+          case "LongPress":
+            return `<span class="lbl">👉 长按</span>${coordDD(b.id, "x", "y", b.params.x, b.params.y, "point")} <span class="lbl">ms</span> <input type="number" style="width:50px" value="${b.params.dur}" onchange="up(${b.id},'dur',this.value)">`;
+          case "Swipe":
+            return `<span class="lbl">👈 起点</span>${coordDD(b.id, "x1", "y1", b.params.x1, b.params.y1, "point")} <span class="lbl">→终点</span>${coordDD(b.id, "x2", "y2", b.params.x2, b.params.y2, "point")}`;
+          case "Wait":
+            return `<span class="lbl">⏱ 等待</span> <input type="number" value="${b.params.sec}" onchange="up(${b.id},'sec',this.value)"> <span class="lbl">秒</span>`;
+          case "StartApp":
+            return `<span class="lbl">📱 启动</span>${pkgDD(b.id, b.params.pkg)}`;
+          case "StopApp":
+            return `<span class="lbl">⏹ 停止</span>${pkgDD(b.id, b.params.pkg)}`;
+          case "Shell":
+            return `<span class="lbl">💻 Shell</span> <input type="text" class="wide" value="${b.params.cmd}" onchange="up(${b.id},'cmd',this.value)">`;
+          case "Back":
+            return `<span class="lbl">↩ 返回键</span>`;
+          case "Home":
+            return `<span class="lbl">🏠 主页键</span>`;
+          case "Screencap":
+            return `<span class="lbl">📸 截图</span>`;
+          case "OCR":
+            return `<span class="lbl">🔤 OCR 识别</span>`;
+          case "TapFound":
+            return `<span class="lbl">👆 点击找到的位置</span>`;
+          case "Continue":
+            return `<span class="lbl">⏭ 跳过本次循环</span>`;
+          case "Break":
+            return `<span class="lbl">⏹ 跳出循环</span>`;
+          default:
+            return `<span>${b.type}</span>`;
+        }
+      }
+
+      function up(id, k, v) {
+        const b = findB(wb, id);
+        if (b) b.params[k] = v;
+        compile();
+      }
+      function rem(id) {
+        wb = remList(wb, id);
+        render();
+      }
+
+      function hasType(list, t) {
+        for (const b of list) {
+          if (b.type === t) return true;
+          if (b.children && hasType(b.children, t)) return true;
+          if (b.then && hasType(b.then, t)) return true;
+          if (b.else_ && hasType(b.else_, t)) return true;
+        }
+        return false;
+      }
+
+      // ── 鼠标驱动拖动排序 ──
+      const DRAG_THRESHOLD = 4; // px 移动阈值，区分点击与拖拽
+      let _drag = null; // { id, clone, startX, startY, offsetX, offsetY, active, src }
+
+      // mousedown 委托：在 .wsb 上按下（排除 input/select/button）
+      document.addEventListener("mousedown", function (e) {
+        if (e.button !== 0) return; // 只响应左键
+        var t = e.target;
+        if (t.closest("input") || t.closest("select") || t.closest("button") || t.closest("textarea")) return;
+        var wsb = t.closest(".wsb");
+        if (!wsb) return;
+        var id = parseInt(wsb.getAttribute("data-id"));
+        if (!id || isNaN(id)) return;
+        var src = findParentList(wb, id);
+        if (!src) return;
+        _drag = {
+          id: id,
+          clone: null,
+          startX: e.clientX,
+          startY: e.clientY,
+          offsetX: e.clientX - wsb.getBoundingClientRect().left,
+          offsetY: e.clientY - wsb.getBoundingClientRect().top,
+          active: false,
+          src: src,
+        };
+      });
+
+      // mousemove 全局
+      document.addEventListener("mousemove", function (e) {
+        if (!_drag) return;
+        var dx = e.clientX - _drag.startX;
+        var dy = e.clientY - _drag.startY;
+        // 超过阈值才激活拖拽
+        if (!_drag.active) {
+          if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+          _drag.active = true;
+          // 创建跟随光标的不透明克隆
+          var orig = document.querySelector('.wsb[data-id="' + _drag.id + '"]');
+          if (orig) {
+            _drag.clone = orig.cloneNode(true);
+            _drag.clone.classList.add("drag-clone");
+            _drag.clone.style.position = "fixed";
+            _drag.clone.style.zIndex = "99999";
+            _drag.clone.style.pointerEvents = "none";
+            _drag.clone.style.width = orig.getBoundingClientRect().width + "px";
+            _drag.clone.style.opacity = "0.95";
+            _drag.clone.style.boxShadow = "0 8px 24px rgba(0,0,0,0.5)";
+            _drag.clone.style.border = "2px solid #ffffff";
+            document.body.appendChild(_drag.clone);
+            orig.style.opacity = "0.25";
+          }
+        }
+        // 移动克隆
+        if (_drag.clone) {
+          _drag.clone.style.left = (e.clientX - _drag.offsetX) + "px";
+          _drag.clone.style.top = (e.clientY - _drag.offsetY) + "px";
+        }
+        // 更新插入线
+        updateInsertLine(e);
+      });
+
+      // mouseup 全局
+      document.addEventListener("mouseup", function (e) {
+        if (!_drag) return;
+        var orig = document.querySelector('.wsb[data-id="' + _drag.id + '"]');
+        if (orig) orig.style.opacity = "";
+        if (_drag.clone) { _drag.clone.remove(); _drag.clone = null; }
+        clearDropLine();
+        // 如果确实拖动了，执行重排
+        if (_drag.active) {
+          var tgt = resolveDropTarget(e);
+          if (tgt && !(tgt.pid === _drag.id || (tgt.pid && isDescendant(tgt.pid, _drag.id)))) {
+            // 从原列表移除
+            var block = _drag.src.arr.splice(_drag.src.idx, 1)[0];
+            // tgt.idx 已基于排除拖拽块的 DOM 计算，对应移除后的数组索引
+            tgt.arr.splice(tgt.idx, 0, block);
+            render();
+          }
+        }
+        _drag = null;
+      });
+
+      // 面板拖放 (HTML5) 也显示插入线
+      document.addEventListener("dragover", function (e) {
+        if (_drag) return; // 内部鼠标拖拽已处理
+        e.preventDefault();
+        updateInsertLine(e);
+      });
+
+      // 获取容器中可排序的 DOM 子元素（内部拖拽时排除被拖拽块）
+      function getBlockKids(container) {
+        return Array.from(container.children).filter(function (c) {
+          if (!(c.classList.contains("wsb") || c.classList.contains("wsloop") || c.classList.contains("wsbranch"))) return false;
+          if (_drag) {
+            var cid = parseInt(c.getAttribute("data-id"));
+            if (!cid || isNaN(cid)) {
+              var inner = c.querySelector(".wsb");
+              if (inner) cid = parseInt(inner.getAttribute("data-id"));
+            }
+            if (cid === _drag.id) return false;
+          }
+          return true;
+        });
+      }
+
+      // 根据鼠标位置计算目标列表和插入索引
+      function resolveDropTarget(e) {
+        var cx = e.clientX, cy = e.clientY;
+        var containers = [];
+        document.querySelectorAll(".canvas, #blocks, .ws-children, .branch-col").forEach(function (c) {
+          var r = c.getBoundingClientRect();
+          if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+            containers.push(c);
+          }
+        });
+        var raw = containers.length ? containers[containers.length - 1] : document.getElementById("blocks");
+        var container = raw.classList.contains("canvas") ? document.getElementById("blocks") : raw;
+        if (!container) return null;
+        var pid = container.getAttribute("data-pid") ? parseInt(container.getAttribute("data-pid")) : null;
+        var ltype = container.getAttribute("data-list") || null;
+        var tgtArr;
+        if (!pid) tgtArr = wb;
+        else {
+          var pb = findB(wb, pid);
+          if (!pb) return null;
+          if (ltype === "children") { pb.children = pb.children || []; tgtArr = pb.children; }
+          else if (ltype === "then") { pb.then = pb.then || []; tgtArr = pb.then; }
+          else if (ltype === "else") { pb.else_ = pb.else_ || []; tgtArr = pb.else_; }
+          else tgtArr = wb;
+        }
+        // 使用排除被拖拽块的 DOM 子元素列表
+        var kids = getBlockKids(container);
+        var idx = kids.length;
+        for (var i = 0; i < kids.length; i++) {
+          var rect = kids[i].getBoundingClientRect();
+          if (cy < rect.top + rect.height / 2) { idx = i; break; }
+        }
+        return { arr: tgtArr, idx: idx, pid: pid, ltype: ltype };
+      }
+
+      // 递归查找 block 所在的父列表和索引
+      function findParentList(list, id) {
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id === id) return { arr: list, idx: i, pid: null, ltype: null };
+        }
+        for (var i = 0; i < list.length; i++) {
+          var sub = _fplSub(list[i], id);
+          if (sub) return sub;
+        }
+        return null;
+      }
+      function _fplSub(b, id) {
+        var keys = ["children", "then", "else_"];
+        for (var k = 0; k < keys.length; k++) {
+          var arr = b[keys[k]];
+          if (!arr) continue;
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id === id) return { arr: arr, idx: i, pid: b.id, ltype: keys[k] };
+          }
+          for (var i = 0; i < arr.length; i++) {
+            var sub = _fplSub(arr[i], id);
+            if (sub) return sub;
+          }
+        }
+        return null;
+      }
+
+      function isDescendant(blockId, ancestorId) {
+        var parent = findParentList(wb, blockId);
+        if (!parent || !parent.pid) return false;
+        if (parent.pid === ancestorId) return true;
+        return isDescendant(parent.pid, ancestorId);
+      }
+
+      function clearDropLine() {
+        document.querySelectorAll(".drop-indicator").forEach(function (el) { el.remove(); });
+      }
+
+      function updateInsertLine(e) {
+        clearDropLine();
+        var tgt = resolveDropTarget(e);
+        if (!tgt) return;
+        // 面板拖放无 _drag，跳过自身引用检查
+        if (_drag) {
+          if (tgt.pid === _drag.id || (tgt.pid && isDescendant(tgt.pid, _drag.id))) return;
+        }
+        var container = document.querySelector(
+          !tgt.pid ? "#blocks" :
+          tgt.ltype === "children" ? '.ws-children[data-pid="' + tgt.pid + '"]' :
+          '.branch-col.' + tgt.ltype + '[data-pid="' + tgt.pid + '"]'
+        );
+        if (!container) return;
+
+        var atOriginal = _drag && tgt.arr === _drag.src.arr && tgt.idx === _drag.src.idx;
+
+        if (atOriginal) {
+          var origEl = document.querySelector('.wsb[data-id="' + _drag.id + '"]');
+          if (origEl && container.contains(origEl)) {
+            var bracket = origEl;
+            while (bracket.parentNode && bracket.parentNode !== container) {
+              bracket = bracket.parentNode;
+            }
+            var top = document.createElement("div");
+            top.className = "drop-indicator";
+            var bot = document.createElement("div");
+            bot.className = "drop-indicator";
+            container.insertBefore(top, bracket);
+            container.insertBefore(bot, bracket.nextSibling);
+          }
+        } else {
+          var kids = getBlockKids(container);
+          var idx = tgt.idx;
+          var line = document.createElement("div");
+          line.className = "drop-indicator";
+          if (idx < kids.length && kids[idx]) {
+            container.insertBefore(line, kids[idx]);
+          } else {
+            container.appendChild(line);
+          }
+        }
+      }
+
+      function compile() {
+        const lines = [];
+        lines.push("# Generated by 模拟器脚本自助");
+        lines.push("from time import sleep");
+        const needMatcher = hasType(wb, "If") || hasType(wb, "TapFound");
+        const needOCR = hasType(wb, "OcrIf") || hasType(wb, "OCR");
+        if (needMatcher)
+          lines.push("from auto_ld.controller.matcher import TemplateMatcher");
+        if (needOCR) lines.push("from auto_ld.controller.ocr import OCREngine");
+        lines.push("");
+        lines.push("def run(ctx):");
+        if (needMatcher) lines.push("    matcher = TemplateMatcher()");
+        if (needOCR) lines.push("    ocr = OCREngine()");
+        elines(wb, lines, "    ");
+        lines.push("    return True");
+        $("preview").textContent = lines.join("\n");
+      }
+
+      function elines(list, lines, ind) {
+        for (const b of list) {
+          lines.push(ind + toPy(b, ind));
+          if (b.children) elines(b.children, lines, ind + "    ");
+          if (b.then) {
+            if (b.then.length) elines(b.then, lines, ind + "    ");
+            else lines.push(ind + "    pass");
+          }
+          if (b.else_) {
+            if (b.else_.length) {
+              lines.push(ind + "else:");
+              elines(b.else_, lines, ind + "    ");
+            } else {
+              lines.push(ind + "else:");
+              lines.push(ind + "    pass");
+            }
+          }
+        }
+      }
+
+      function toPy(b, ind) {
+        switch (b.type) {
+          case "Click":
+            return `ctx.touch.click(${b.params.x}, ${b.params.y})`;
+          case "LongPress":
+            return `ctx.touch.long_press(${b.params.x}, ${b.params.y}, ${b.params.dur || 1000})`;
+          case "Swipe":
+            return `ctx.adb.swipe(${b.params.x1}, ${b.params.y1}, ${b.params.x2}, ${b.params.y2})  # ${b.params.x1},${b.params.y1} → ${b.params.x2},${b.params.y2}`;
+          case "Back":
+            return `ctx.touch.back()`;
+          case "Home":
+            return `ctx.touch.home()`;
+          case "Wait":
+            return `ctx.wait(${b.params.sec || 1})`;
+          case "Loop":
+            return b.params.n == 0
+              ? `while True:`
+              : `for _ in range(${b.params.n != null ? b.params.n : 1}):`;
+          case "If": {
+            const roi = b.params.x1
+              ? `, roi=(${b.params.x1},${b.params.y1},${b.params.x2},${b.params.y2})`
+              : "";
+            const th = b.params.th ? ", threshold=" + b.params.th : "";
+            const tmpl = b.params.tmpl || "";
+            const path = tmpl.startsWith("images")
+              ? tmpl
+              : `images/${tmpl}.png`;
+            return `result = matcher.find(r"${path}", ctx.cap()${roi}${th})\n${ind}if result:`;
+          }
+          case "OcrIf": {
+            const roi = b.params.x1
+              ? `, roi=(${b.params.x1},${b.params.y1},${b.params.x2},${b.params.y2})`
+              : "";
+            return `result = ocr.find("${b.params.text || "确定"}", ctx.cap()${roi})\n${ind}if result:`;
+          }
+          case "StartApp":
+            return `ctx.adb.start("${b.params.pkg}"); ctx.wait(2)`;
+          case "StopApp":
+            return `ctx.adb.stop("${b.params.pkg}")`;
+          case "Screencap":
+            return `img = ctx.cap()`;
+          case "OCR":
+            return `results = ocr.read(ctx.cap())\n${ind}ctx.log.info(f"OCR 识别到 {len(results)} 个文字: {[r['text'] for r in results]}")`;
+          case "TapFound":
+            return `ctx.touch.click(result["x"], result["y"])`;
+          case "Continue":
+            return `continue`;
+          case "Break":
+            return `break`;
+          case "Shell":
+            return `ctx.adb.shell("${b.params.cmd || "echo"}")`;
+          default:
+            return `# unknown: ${b.type}`;
+        }
+      }
+
+      function doSave() {
+        const n = $("sn").value || "my_script";
+        $("sn").value = n;
+        compile();
+        const code = $("preview").textContent;
+        fetch("/api/scripts/" + n, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: code }),
+        })
+          .then((r) => r.json())
+          .then((r) => {
+            fetch("/api/scripts/" + n + "/blocks", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ blocks: wb }),
+            })
+              .then((r2) => r2.json())
+              .then((r2) => {
+                const ok = r.success && r2.success;
+                $("notice").style.display = "inline";
+                $("notice").textContent = ok ? "✓ 已保存" : "✗ 保存失败";
+                setTimeout(() => ($("notice").style.display = "none"), 2000);
+              });
+          });
+      }
+
+      // Test run via SSE
+      function doRun() {
+        const n = $("sn").value || "my_script";
+        $("sn").value = n;
+        // Save first
+        compile();
+        const code = $("preview").textContent;
+        fetch("/api/scripts/" + n, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: code }),
+        })
+          .then((r) => r.json())
+          .then(() => {
+            // Start SSE run
+            const out = $("run-out");
+            out.classList.add("show");
+            out.innerHTML = "";
+            const btn = $("run-btn");
+            btn.textContent = "⏳ 运行中...";
+            btn.disabled = true;
+            const es = new EventSource("/api/run/" + n);
+            es.addEventListener("log", function (e) {
+              const d = JSON.parse(e.data);
+              const l = document.createElement("div");
+              l.className = "r-log";
+              l.textContent = d.message;
+              out.appendChild(l);
+              out.scrollTop = out.scrollHeight;
+            });
+            es.addEventListener("start", function (e) {
+              const d = JSON.parse(e.data);
+              const l = document.createElement("div");
+              l.className = "r-ok";
+              l.textContent = "▶ 开始: " + d.script;
+              out.appendChild(l);
+              out.scrollTop = out.scrollHeight;
+            });
+            es.addEventListener("done", function (e) {
+              const d = JSON.parse(e.data);
+              const l = document.createElement("div");
+              l.className = d.success ? "r-ok" : "r-err";
+              l.textContent = d.success ? "✓ 运行成功" : "✗ 运行失败";
+              out.appendChild(l);
+              out.scrollTop = out.scrollHeight;
+              es.close();
+              btn.textContent = "▶ 测试运行";
+              btn.disabled = false;
+            });
+            es.addEventListener("error", function (e) {
+              const l = document.createElement("div");
+              l.className = "r-err";
+              l.textContent = "✗ 执行出错";
+              out.appendChild(l);
+              es.close();
+              btn.textContent = "▶ 测试运行";
+              btn.disabled = false;
+            });
+            es.onerror = function () {
+              es.close();
+              btn.textContent = "▶ 测试运行";
+              btn.disabled = false;
+            };
+          });
+      }
+
+      function doLoad() {
+        const n = $("sn").value || "";
+        if (!n) { alert("请先输入脚本名称"); return; }
+        fetch("/api/scripts/" + n)
+          .then((r) => r.json())
+          .then((r) => {
+            if (r.error) {
+              alert(r.error);
+              return;
+            }
+            wb = r.blocks && r.blocks.length ? r.blocks : [];
+            const ids = allIds(wb);
+            cid = ids.length ? Math.max(...ids) : 0;
+            render();
+          });
+      }
+      function doNew() {
+        wb = [];
+        cid = 0;
+        $("sn").value = "my_script";
+        $("run-out").classList.remove("show");
+        $("run-out").innerHTML = "";
+        render();
+      }
+
+      bldSidebar();
+      render();
+      loadTemplates();
+      loadCoords();
+      loadPkgs();
+
+      function loadTemplates() {
+        fetch("/api/templates")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            tmplList = (d.templates || []).map(function (t) {
+              return { name: t.name, path: t.path };
+            });
+          });
+      }
+      function populateTmplSelect(blockId, currentVal) {
+        var sel = document.getElementById("tmpl-sel-" + blockId);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">-- 选择图片 --</option>';
+        tmplList.forEach(function (t) {
+          sel.innerHTML +=
+            '<option value="' +
+            t.path +
+            '"' +
+            (t.path === currentVal || t.name === currentVal
+              ? " selected"
+              : "") +
+            ">" +
+            t.name +
+            "</option>";
+        });
+        sel.innerHTML += '<option value="__custom__">自定义...</option>';
+      }
+      var tmplList = [];
+      var pkgList = [];
+      function loadPkgs() {
+        fetch("/api/packages/saved")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            pkgList = d.packages || [];
+          });
+      }
+      function pkgDD(blockId, currentVal) {
+        var opts = pkgList
+          .map(function (p) {
+            return (
+              '<option value="' +
+              p +
+              '"' +
+              (p === currentVal ? " selected" : "") +
+              ">" +
+              p +
+              "</option>"
+            );
+          })
+          .join("");
+        var hasMatch = pkgList.indexOf(currentVal) >= 0;
+        if (!hasMatch && currentVal)
+          opts =
+            '<option value="' +
+            currentVal +
+            '" selected>' +
+            currentVal +
+            "</option>" +
+            opts;
+        return (
+          '<select style="background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:3px 6px;font-size:12px;max-width:180px" onchange="pkgDDChange(' +
+          blockId +
+          ',this)">' +
+          opts +
+          "</select>"
+        );
+      }
+      function pkgDDChange(id, sel) {
+        up(id, "pkg", sel.value);
+        render();
+      }
+    </script>
+  </body>
+</html>

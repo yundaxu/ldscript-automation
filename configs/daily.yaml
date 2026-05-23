@@ -1,0 +1,21 @@
+# 每日任务配置
+ldplayer:
+  index: 1
+
+tasks:
+  - name: "启动应用"
+    type: script
+    file: "start_app"
+    enabled: true
+    config:
+      package: "com.example.app"
+
+  - name: "等待加载"
+    type: script
+    file: "wait_and_check"
+    enabled: true
+
+  - name: "流水线任务"
+    type: pipeline
+    file: "daily_signin"
+    enabled: false

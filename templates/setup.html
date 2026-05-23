@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>模拟器脚本自助 — 初始化设置</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0d1117; color: #c9d1d9; min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.card {
+  background: #161b22; border: 1px solid #21262d; border-radius: 12px;
+  padding: 40px; max-width: 520px; width: 90%; text-align: center;
+}
+.card .icon { font-size: 48px; margin-bottom: 16px; }
+.card h1 { font-size: 24px; color: #58a6ff; margin-bottom: 8px; }
+.card .subtitle { font-size: 13px; color: #8b949e; margin-bottom: 28px; }
+
+.checks { text-align: left; margin-bottom: 20px; }
+.check {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-radius: 8px; margin-bottom: 8px;
+  background: #21262d; border: 1px solid #30363d;
+  transition: all 0.3s;
+}
+.check .icon {
+  font-size: 20px; width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: #30363d;
+}
+.check .info { flex: 1; }
+.check .info .title { font-size: 13px; color: #c9d1d9; margin-bottom: 2px; }
+.check .info .val { font-size: 11px; color: #8b949e; font-family: Consolas, monospace; }
+.check.pass { background: #1a2a1f; border-color: #238636; }
+.check.pass .icon { background: #238636; }
+.check.fail { background: #2a1a1a; border-color: #da3633; }
+.check .icon::after { content: "○"; color: #8b949e; }
+.check.pass .icon::after { content: "✓"; color: #fff; }
+.check.fail .icon::after { content: "✗"; color: #fff; }
+.check .info .val.err { color: #f85149; }
+.check .info .val.ok { color: #3fb950; }
+
+.btn {
+  border: 1px solid #30363d; padding: 10px 24px; border-radius: 6px;
+  cursor: pointer; font-size: 14px; background: #21262d; color: #c9d1d9;
+  transition: all 0.2s;
+}
+.btn:hover { background: #30363d; }
+.btn.primary { background: #238636; border-color: #2ea043; color: #fff; }
+.btn.primary:hover { background: #2ea043; }
+.btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.blue { background: #1f6feb; border-color: #388bfd; color: #fff; }
+.btn.blue:hover { background: #388bfd; }
+.btn.blue:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+.spin { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.tip { font-size: 11px; color: #484f58; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🤖</div>
+  <h1>模拟器脚本自助</h1>
+  <div class="subtitle">首次使用 — 请完成以下三项检测</div>
+
+  <div class="checks">
+    <div class="check" id="c1">
+      <div class="icon"></div>
+      <div class="info">
+        <div class="title">① 模拟器安装路径</div>
+        <div class="val" id="v-emu">等待检测…</div>
+      </div>
+    </div>
+    <div class="check" id="c2">
+      <div class="icon"></div>
+      <div class="info">
+        <div class="title">② ADB 工具路径</div>
+        <div class="val" id="v-adb">等待检测…</div>
+      </div>
+    </div>
+    <div class="check" id="c3">
+      <div class="icon"></div>
+      <div class="info">
+        <div class="title">③ 模拟器设备连接</div>
+        <div class="val" id="v-addr">等待检测…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn blue" id="btn-detect" onclick="doDetect()">🔍 开始检测</button>
+    <button class="btn primary" id="btn-finish" onclick="doFinish()" disabled>✓ 进入控制面板</button>
+  </div>
+  <div class="tip" id="tip">请先打开雷电多开器，确保至少启动了一个模拟器实例</div>
+  <div style="margin-top:12px">
+    <a href="#" style="font-size:11px;color:#484f58"
+       onclick="if(confirm('确定跳过初始化设置？\n\n之后可在\"设置 → 连接设置\"中重新配置。')){api('POST','/api/setup/complete',{}).then(function(){location.href='/'})};return false">
+      跳过设置，直接进入
+    </a>
+  </div>
+</div>
+
+<script>
+var passCount = 0;
+
+function api(method, path, body) {
+  return fetch(path, {
+    method: method,
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(function (r) { return r.json(); });
+}
+
+function setCheck(n, ok, text) {
+  var el = document.getElementById("c" + n);
+  var v = document.getElementById(["","v-emu","v-adb","v-addr"][n]);
+  el.classList.remove("pass", "fail");
+  if (ok) {
+    el.classList.add("pass");
+    v.classList.remove("err");
+    v.classList.add("ok");
+  } else {
+    el.classList.add("fail");
+    v.classList.remove("ok");
+    v.classList.add("err");
+  }
+  v.textContent = text;
+}
+
+function checkAllPassed() {
+  return document.getElementById("c1").classList.contains("pass") &&
+         document.getElementById("c2").classList.contains("pass") &&
+         document.getElementById("c3").classList.contains("pass");
+}
+
+function updateFinishBtn() {
+  var btn = document.getElementById("btn-finish");
+  var tip = document.getElementById("tip");
+  if (checkAllPassed()) {
+    btn.disabled = false;
+    tip.textContent = "全部检测通过！点击进入控制面板";
+    tip.style.color = "#3fb950";
+  } else {
+    btn.disabled = true;
+    tip.textContent = "请先打开雷电多开器，确保至少启动了一个模拟器实例";
+    tip.style.color = "#484f58";
+  }
+}
+
+function doDetect() {
+  var btn = document.getElementById("btn-detect");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⏳</span> 正在扫描系统…';
+  document.getElementById("btn-finish").disabled = true;
+
+  // Reset all
+  ["c1","c2","c3"].forEach(function(id) {
+    document.getElementById(id).classList.remove("pass","fail");
+  });
+  ["v-emu","v-adb","v-addr"].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.textContent = "检测中…";
+    el.classList.remove("ok","err");
+  });
+
+  api("POST", "/api/settings/autodetect")
+    .then(function (d) {
+      btn.disabled = false;
+      btn.textContent = "🔄 重新检测";
+
+      // ① Emulator path
+      if (d.emulator_path) {
+        setCheck(1, true, d.emulator_path);
+        // Save emulator path to settings
+        api("POST", "/api/settings", { launch: { emulator_path: d.emulator_path } });
+      } else {
+        setCheck(1, false, "未找到 — 请打开雷电多开器并启动一个模拟器");
+      }
+
+      // ② ADB path
+      if (d.adb_path) {
+        setCheck(2, true, d.adb_path);
+        api("POST", "/api/settings", { connection: { adb_path: d.adb_path } });
+      } else if (d.emulator_path) {
+        setCheck(2, false, "模拟器目录中未找到 adb.exe");
+      } else {
+        setCheck(2, false, "需先通过第①项检测");
+      }
+
+      // ③ Device address
+      if (d.address) {
+        setCheck(3, true, d.address);
+        api("POST", "/api/settings", { connection: { address: d.address } });
+      } else if (d.emulator_path) {
+        setCheck(3, false, "未检测到设备 — 请启动一个模拟器实例");
+      } else {
+        setCheck(3, false, "需先通过第①项检测");
+      }
+
+      updateFinishBtn();
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = "🔄 重试检测";
+      setCheck(1, false, "检测失败: " + e);
+      setCheck(2, false, "检测失败");
+      setCheck(3, false, "检测失败");
+      updateFinishBtn();
+    });
+}
+
+function doFinish() {
+  if (!checkAllPassed()) return;
+  api("POST", "/api/setup/complete", {}).then(function () {
+    window.location.href = "/";
+  });
+}
+</script>
+</body>
+</html>

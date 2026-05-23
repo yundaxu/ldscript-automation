@@ -1,0 +1,1255 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模拟器脚本自助 — 控制面板</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0d1117;
+        color: #c9d1d9;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .header {
+        background: #161b22;
+        padding: 0 24px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #21262d;
+        flex-shrink: 0;
+      }
+      .header h1 {
+        font-size: 20px;
+        color: #58a6ff;
+        letter-spacing: 2px;
+      }
+      .header .nav-links {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .header .nav-links a {
+        color: #8b949e;
+        text-decoration: none;
+        font-size: 13px;
+        transition: color 0.2s;
+      }
+      .header .nav-links a:hover {
+        color: #58a6ff;
+      }
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 13px;
+      }
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .status-dot.on {
+        background: #3fb950;
+        box-shadow: 0 0 8px #3fb950;
+        animation: pulse 2s infinite;
+      }
+      .status-dot.off {
+        background: #f85149;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      /* 3-column layout */
+      .main {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .col {
+        overflow-y: auto;
+        padding: 12px;
+        background: #161b22;
+        border-right: 1px solid #21262d;
+      }
+      .col-l {
+        width: 280px;
+        min-width: 280px;
+      }
+      .col-m {
+        flex: 1;
+        min-width: 300px;
+      }
+      .col-r {
+        width: 260px;
+        min-width: 260px;
+        border-right: none;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .stat-card {
+        background: #21262d;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .stat-card .val {
+        font-size: 22px;
+        font-weight: bold;
+        color: #58a6ff;
+      }
+      .stat-card .lbl {
+        font-size: 10px;
+        color: #8b949e;
+        margin-top: 4px;
+      }
+      .section {
+        background: #21262d;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .section h3 {
+        font-size: 11px;
+        color: #8b949e;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section h3 .actions {
+        margin-left: auto;
+      }
+      .btn {
+        background: #238636;
+        color: #fff;
+        border: 1px solid #2ea043;
+        padding: 5px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        margin-right: 3px;
+        margin-bottom: 3px;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #2ea043;
+      }
+      .btn.sm {
+        padding: 3px 8px;
+        font-size: 10px;
+      }
+      .btn.gray {
+        background: #21262d;
+        border-color: #30363d;
+        color: #8b949e;
+      }
+      .btn.gray:hover {
+        background: #30363d;
+        color: #c9d1d9;
+      }
+      .btn.red {
+        background: #da3633;
+        border-color: #f85149;
+      }
+      .btn.red:hover {
+        background: #f85149;
+      }
+      .btn.danger {
+        background: transparent;
+        border: 1px solid #f85149;
+        color: #f85149;
+        font-size: 10px;
+        padding: 2px 6px;
+      }
+      .btn.danger:hover {
+        background: #da3633;
+        color: #fff;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      select,
+      input[type="text"] {
+        background: #0d1117;
+        color: #c9d1d9;
+        border: 1px solid #30363d;
+        padding: 5px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        width: 100%;
+        margin-bottom: 5px;
+      }
+      .screenshot-wrap {
+        position: relative;
+        cursor: crosshair;
+        text-align: center;
+      }
+      .screenshot-img {
+        max-width: 100%;
+        max-height: 50vh;
+        border-radius: 4px;
+        border: 1px solid #30363d;
+      }
+      .coord-tooltip {
+        position: absolute;
+        background: #1f6feb;
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        pointer-events: none;
+        display: none;
+        white-space: nowrap;
+        z-index: 10;
+      }
+      .coord-output {
+        font-size: 11px;
+        color: #8b949e;
+        margin-top: 6px;
+        min-height: 18px;
+        text-align: center;
+      }
+      .empty-hint {
+        color: #484f58;
+        font-size: 12px;
+        text-align: center;
+        padding: 12px;
+      }
+      .script-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid #21262d;
+        font-size: 12px;
+        gap: 6px;
+      }
+      .script-item:last-child {
+        border-bottom: none;
+      }
+      .script-item .tag {
+        font-size: 9px;
+        background: #21262d;
+        padding: 2px 5px;
+        border-radius: 3px;
+        color: #8b949e;
+        white-space: nowrap;
+      }
+      .script-item .name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .script-item .btns {
+        display: flex;
+        gap: 3px;
+        white-space: nowrap;
+      }
+      .log-area {
+        height: 28vh;
+        min-height: 100px;
+        background: #0d1117;
+        padding: 12px 16px;
+        overflow-y: auto;
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        border-top: 1px solid #21262d;
+      }
+      .logbar {
+        background: #161b22;
+        padding: 5px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        border-top: 1px solid #21262d;
+      }
+      .log-info {
+        color: #58a6ff;
+      }
+      .log-warn {
+        color: #d29922;
+      }
+      .log-error {
+        color: #f85149;
+      }
+      .log-debug {
+        color: #8b949e;
+      }
+      .log-start {
+        color: #3fb950;
+        font-weight: bold;
+      }
+      .log-done {
+        color: #3fb950;
+        font-weight: bold;
+      }
+      .log-system {
+        color: #a371f7;
+      }
+      .instance-status {
+        font-size: 10px;
+        color: #8b949e;
+        margin-top: 6px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 24px">
+        <h1>模拟器脚本自助</h1>
+        <div class="nav-links">
+          <a href="/">控制面板</a><a href="/editor">积木编辑器</a
+          ><a href="/settings">设置</a>
+        </div>
+      </div>
+      <div class="status-bar">
+        <span id="status-dot" class="status-dot off"></span>
+        <span id="status-text">未连接</span>
+        <span id="status-serial" style="color: #8b949e"></span>
+      </div>
+    </div>
+
+    <div class="main">
+      <!-- 左列: 控制 -->
+      <div class="col col-l">
+        <div class="stats">
+          <div class="stat-card">
+            <div class="val" id="stat-instances">-</div>
+            <div class="lbl">实例</div>
+          </div>
+          <div class="stat-card">
+            <div class="val" id="stat-scripts">-</div>
+            <div class="lbl">脚本</div>
+          </div>
+          <div class="stat-card">
+            <div class="val" id="stat-resolution">-</div>
+            <div class="lbl">分辨率</div>
+          </div>
+          <div class="stat-card">
+            <div class="val" id="stat-tasks">-</div>
+            <div class="lbl">任务</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>
+            实例管理
+            <button
+              class="btn sm gray"
+              onclick="refreshInstances()"
+              style="margin-left: auto"
+            >
+              刷新
+            </button>
+          </h3>
+          <select id="instance-select" onchange="selectInstance()">
+            <option value="">-- 未检测到 --</option>
+          </select>
+          <button class="btn" onclick="launchEmulator()">启动</button>
+          <button class="btn red" onclick="quitEmulator()">关闭</button>
+          <button class="btn gray" onclick="reconnect()">重连</button>
+          <div class="instance-status" id="instance-status"></div>
+        </div>
+
+        <div class="section">
+          <h3>包名查询</h3>
+          <button class="btn sm" onclick="getForegroundPackage()">
+            前台应用
+          </button>
+          <button
+            class="btn sm gray"
+            onclick="saveCurrentPackage()"
+            style="margin-left: 2px"
+          >
+            保存包名
+          </button>
+          <span
+            id="pkg-result"
+            style="font-size: 11px; margin-left: 6px"
+          ></span>
+          <div style="margin-top: 4px; display: flex; gap: 4px">
+            <input
+              type="text"
+              id="pkg-search"
+              placeholder="搜索包名..."
+              style="margin-bottom: 0"
+            />
+            <button
+              class="btn sm"
+              onclick="searchPackages()"
+              style="flex-shrink: 0"
+            >
+              搜
+            </button>
+          </div>
+          <div
+            id="pkg-list"
+            style="
+              font-size: 10px;
+              max-height: 100px;
+              overflow-y: auto;
+              margin-top: 4px;
+            "
+          ></div>
+        </div>
+
+        <div class="section">
+          <h3>图片 &amp; 坐标</h3>
+          <div id="res-list" style="font-size: 11px; line-height: 1.8"></div>
+        </div>
+      </div>
+
+      <!-- 中列: 截图 -->
+      <div class="col col-m">
+        <div
+          class="section"
+          style="
+            height: calc(100% - 10px);
+            display: flex;
+            flex-direction: column;
+          "
+        >
+          <h3>
+            截图 &amp; 坐标 / 模板
+            <span class="actions">
+              <button class="btn sm" onclick="takeScreenshot()">截图</button>
+              <button
+                class="btn sm gray"
+                id="tmpl-btn"
+                onclick="toggleTemplateMode()"
+              >
+                选取
+              </button>
+            </span>
+          </h3>
+          <div
+            class="screenshot-wrap"
+            id="screenshot-wrap"
+            style="
+              flex: 1;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 200px;
+            "
+          >
+            <canvas
+              id="screenshot-canvas"
+              class="screenshot-img"
+              style="display: none"
+            ></canvas>
+            <img
+              id="screenshot-img"
+              class="screenshot-img"
+              alt=""
+              style="display: none"
+              crossorigin="anonymous"
+            />
+            <div id="screenshot-placeholder" class="empty-hint">
+              点击"截图"获取模拟器画面<br />点"选取"后点击画面选点
+            </div>
+          </div>
+          <div class="coord-tooltip" id="coord-tooltip"></div>
+          <div class="coord-output" id="coord-output"></div>
+          <div
+            id="tmpl-prompt"
+            style="display: none; margin-top: 6px; text-align: center"
+          >
+            <input
+              type="text"
+              id="tmpl-name"
+              placeholder="名称"
+              style="width: 80px; margin: 0 4px"
+            />
+            <button class="btn sm" id="btn-save-pt" onclick="savePoint()">
+              保存单点
+            </button>
+            <button
+              class="btn sm"
+              id="btn-save-rg"
+              onclick="saveRegion()"
+              style="display: none"
+            >
+              保存区域
+            </button>
+            <button
+              class="btn sm"
+              id="btn-save-tmpl"
+              onclick="saveTemplate()"
+              style="display: none"
+            >
+              保存图片
+            </button>
+            <button class="btn sm gray" onclick="cancelSelection()">
+              取消
+            </button>
+          </div>
+          <div style="margin-top: 8px" id="tmpl-thumbs"></div>
+          <div
+            id="tmpl-hover"
+            style="
+              display: none;
+              position: fixed;
+              z-index: 999;
+              pointer-events: none;
+              background: #161b22;
+              border: 1px solid #30363d;
+              border-radius: 8px;
+              padding: 4px;
+              max-width: 200px;
+            "
+          >
+            <img
+              id="tmpl-hover-img"
+              style="max-width: 180px; max-height: 180px; border-radius: 4px"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 右列: 脚本列表 -->
+      <div class="col col-r">
+        <div class="section">
+          <h3>
+            脚本列表
+            <button
+              class="btn sm"
+              onclick="runAllTasks()"
+              style="margin-left: auto"
+            >
+              执行全部
+            </button>
+          </h3>
+          <div id="script-list"><div class="empty-hint">加载中...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="logbar">
+      <span style="color: #8b949e">运行日志</span
+      ><button class="btn sm gray" onclick="clearLog()">清空</button>
+    </div>
+    <div class="log-area" id="log-area"></div>
+
+    <script>
+      let deviceW = 1080,
+        deviceH = 1920;
+
+      function addLog(msg, cls) {
+        const el = document.getElementById("log-area");
+        const d = document.createElement("div");
+        d.className = cls || "log-info";
+        d.textContent = msg;
+        el.appendChild(d);
+        el.scrollTop = el.scrollHeight;
+      }
+      function clearLog() {
+        document.getElementById("log-area").innerHTML = "";
+      }
+
+      async function api(method, path, body) {
+        const opts = {
+          method,
+          headers: body ? { "Content-Type": "application/json" } : {},
+          body: body ? JSON.stringify(body) : undefined,
+        };
+        try {
+          const r = await fetch(path, opts);
+          return await r.json();
+        } catch (e) {
+          addLog("请求失败: " + e.message, "log-error");
+          return null;
+        }
+      }
+
+      async function refreshStatus() {
+        const d = await api("GET", "/api/status");
+        if (!d) return;
+        const dot = document.getElementById("status-dot"),
+          txt = document.getElementById("status-text"),
+          ser = document.getElementById("status-serial");
+        if (d.connected) {
+          dot.className = "status-dot on";
+          txt.textContent = "已连接";
+          ser.textContent = d.serial;
+        } else {
+          dot.className = "status-dot off";
+          txt.textContent = "未连接";
+          ser.textContent = "";
+        }
+        document.getElementById("stat-instances").textContent = (
+          d.instances || []
+        ).length;
+        if (d.resolution && d.resolution[0]) {
+          deviceW = d.resolution[0];
+          deviceH = d.resolution[1];
+        }
+        document.getElementById("stat-resolution").textContent =
+          d.resolution && d.resolution[0] ? deviceW + "x" + deviceH : "-";
+        const sel = document.getElementById("instance-select");
+        sel.innerHTML = "";
+        if (d.instances && d.instances.length > 0) {
+          d.instances.forEach(function (i) {
+            const o = document.createElement("option");
+            o.value = i.index;
+            o.textContent = "[" + i.index + "] " + i.name;
+            if (i.index === d.index) o.selected = true;
+            sel.appendChild(o);
+          });
+        } else {
+          const o = document.createElement("option");
+          o.value = "";
+          o.textContent = "-- 未检测到实例 --";
+          sel.appendChild(o);
+        }
+      }
+
+      async function refreshScripts() {
+        const d = await api("GET", "/api/scripts");
+        if (!d) return;
+        const scripts = d.scripts || [];
+        document.getElementById("stat-scripts").textContent = scripts.length;
+        const list = document.getElementById("script-list");
+        if (scripts.length === 0) {
+          list.innerHTML = '<div class="empty-hint">暂无脚本</div>';
+          return;
+        }
+        list.innerHTML = scripts
+          .map(function (s) {
+            return (
+              '<div class="script-item"><span class="tag">' +
+              s.type +
+              '</span><span class="name">' +
+              s.name +
+              '</span><div class="btns"><button class="btn sm" onclick="runScript(\'' +
+              s.name +
+              '\')">运行</button><button class="btn danger" onclick="deleteScript(\'' +
+              s.name +
+              '\')" title="删除脚本">×</button></div></div>'
+            );
+          })
+          .join("");
+      }
+
+      async function deleteScript(name) {
+        if (!confirm('确定删除脚本 "' + name + '"？')) return;
+        const d = await api("DELETE", "/api/scripts/" + name);
+        if (d?.success) {
+          addLog("已删除: " + name, "log-system");
+          refreshScripts();
+        } else addLog("删除失败", "log-error");
+      }
+
+      async function refreshTasks() {
+        const d = await api("GET", "/api/tasks");
+        document.getElementById("stat-tasks").textContent = (
+          d?.tasks || []
+        ).filter(function (t) {
+          return t.enabled;
+        }).length;
+      }
+
+      async function selectInstance() {
+        const idx = document.getElementById("instance-select").value;
+        if (!idx) return;
+        await api("POST", "/api/instance/select", { index: parseInt(idx) });
+        await refreshStatus();
+      }
+      async function launchEmulator() {
+        addLog("正在启动模拟器...", "log-system");
+        const d = await api("POST", "/api/launch");
+        addLog(
+          d?.success ? "启动成功" : "启动失败",
+          d?.success ? "log-start" : "log-error",
+        );
+        await refreshStatus();
+      }
+      async function quitEmulator() {
+        addLog("正在关闭模拟器...", "log-system");
+        const d = await api("POST", "/api/quit");
+        addLog(
+          d?.success ? "关闭成功" : "关闭失败",
+          d?.success ? "log-start" : "log-error",
+        );
+        await refreshStatus();
+      }
+      async function reconnect() {
+        const d = await api("POST", "/api/connect");
+        addLog(
+          d?.success ? "重连成功" : "重连失败",
+          d?.success ? "log-system" : "log-error",
+        );
+        await refreshStatus();
+      }
+
+      async function takeScreenshot() {
+        const d = await api("GET", "/api/screenshot");
+        if (!d?.image) {
+          addLog("截图失败: " + (d?.error || ""), "log-error");
+          return;
+        }
+        const img = document.getElementById("screenshot-img");
+        img.src = "data:image/png;base64," + d.image;
+        img.style.display = "block";
+        document.getElementById("screenshot-placeholder").style.display =
+          "none";
+        document.getElementById("coord-output").textContent = "";
+        if (selMode) {
+          document.getElementById("tmpl-prompt").style.display = "none";
+        }
+        selStep = 0;
+      }
+
+      function pickCoord(e) {
+        if (selMode) return;
+        const img = e.target,
+          rect = img.getBoundingClientRect();
+        const scaleX = deviceW / rect.width,
+          scaleY = deviceH / rect.height;
+        const dx = Math.round((e.clientX - rect.left) * scaleX),
+          dy = Math.round((e.clientY - rect.top) * scaleY);
+        const tip = document.getElementById("coord-tooltip");
+        tip.style.left = e.clientX - rect.left + 10 + "px";
+        tip.style.top = e.clientY - rect.top - 28 + "px";
+        tip.textContent = "(" + dx + ", " + dy + ")";
+        tip.style.display = "block";
+        document.getElementById("coord-output").textContent =
+          "坐标: (" +
+          dx +
+          ", " +
+          dy +
+          ")  → ctx.touch.click(" +
+          dx +
+          ", " +
+          dy +
+          ")";
+        setTimeout(function () {
+          tip.style.display = "none";
+        }, 3000);
+      }
+
+      var selMode = false,
+        selStep = 0; // 0=idle, 1=first point set, 2=region selected
+      var selX1 = 0,
+        selY1 = 0,
+        selX2 = 0,
+        selY2 = 0;
+
+      function toggleTemplateMode() {
+        selMode = !selMode;
+        selStep = 0;
+        selX1 = selY1 = selX2 = selY2 = 0;
+        var btn = document.getElementById("tmpl-btn"),
+          canvas = document.getElementById("screenshot-canvas"),
+          img = document.getElementById("screenshot-img");
+        if (selMode) {
+          btn.textContent = "选取(ON)";
+          btn.style.color = "#3fb950";
+          btn.style.borderColor = "#3fb950";
+          img.style.display = "none";
+          canvas.style.cursor = "crosshair";
+          document.getElementById("coord-output").textContent =
+            "点击画面选取第一个点";
+          document.getElementById("tmpl-prompt").style.display = "none";
+          if (img.src) {
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.style.width = img.style.width;
+            canvas.style.height = img.style.height;
+            canvas.style.display = "block";
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+          }
+        } else {
+          btn.textContent = "选取";
+          btn.style.color = "";
+          btn.style.borderColor = "";
+          canvas.style.display = "none";
+          if (img.src) img.style.display = "block";
+          document.getElementById("tmpl-prompt").style.display = "none";
+          document.getElementById("coord-output").textContent = "";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        var c = document.getElementById("screenshot-canvas");
+        c.addEventListener("click", function (e) {
+          if (!selMode) return;
+          var rect = c.getBoundingClientRect();
+          var sx = c.width / rect.width,
+            sy = c.height / rect.height;
+          var cx = Math.round((e.clientX - rect.left) * sx),
+            cy = Math.round((e.clientY - rect.top) * sy);
+          if (selStep === 0) {
+            // First point
+            selX1 = cx;
+            selY1 = cy;
+            selStep = 1;
+            document.getElementById("coord-output").textContent =
+              "点1: (" + selX1 + "," + selY1 + ") — 请点击第二个点";
+            document.getElementById("tmpl-prompt").style.display = "block";
+            document.getElementById("btn-save-pt").style.display =
+              "inline-block";
+            document.getElementById("btn-save-rg").style.display = "none";
+            document.getElementById("btn-save-tmpl").style.display = "none";
+            // Draw point marker
+            var ctx = c.getContext("2d"),
+              img = document.getElementById("screenshot-img");
+            ctx.drawImage(img, 0, 0);
+            ctx.fillStyle = "#58a6ff";
+            ctx.beginPath();
+            ctx.arc(selX1, selY1, 6, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (selStep === 1) {
+            // Second point → region
+            selX2 = cx;
+            selY2 = cy;
+            selStep = 2;
+            var x1 = Math.min(selX1, selX2),
+              y1 = Math.min(selY1, selY2),
+              x2 = Math.max(selX1, selX2),
+              y2 = Math.max(selY1, selY2);
+            document.getElementById("coord-output").textContent =
+              "区域: (" +
+              x1 +
+              "," +
+              y1 +
+              ")→(" +
+              x2 +
+              "," +
+              y2 +
+              ") [" +
+              (x2 - x1) +
+              "x" +
+              (y2 - y1) +
+              "]";
+            document.getElementById("btn-save-pt").style.display = "none";
+            document.getElementById("btn-save-rg").style.display =
+              "inline-block";
+            document.getElementById("btn-save-tmpl").style.display =
+              "inline-block";
+            // Draw rectangle
+            var ctx = c.getContext("2d"),
+              img = document.getElementById("screenshot-img");
+            ctx.drawImage(img, 0, 0);
+            ctx.fillStyle = "#58a6ff";
+            ctx.beginPath();
+            ctx.arc(selX1, selY1, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#3fb950";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 2]);
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          } else {
+            // Reset
+            selX1 = cx;
+            selY1 = cy;
+            selX2 = selY2 = 0;
+            selStep = 1;
+            document.getElementById("coord-output").textContent =
+              "点1: (" + selX1 + "," + selY1 + ") — 请点击第二个点";
+            document.getElementById("btn-save-pt").style.display =
+              "inline-block";
+            document.getElementById("btn-save-rg").style.display = "none";
+            document.getElementById("btn-save-tmpl").style.display = "none";
+            var ctx = c.getContext("2d"),
+              img = document.getElementById("screenshot-img");
+            ctx.drawImage(img, 0, 0);
+            ctx.fillStyle = "#58a6ff";
+            ctx.beginPath();
+            ctx.arc(selX1, selY1, 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+      });
+
+      function cancelSelection() {
+        selStep = 0;
+        selX1 = selY1 = selX2 = selY2 = 0;
+        document.getElementById("tmpl-prompt").style.display = "none";
+        document.getElementById("coord-output").textContent = "";
+        var c = document.getElementById("screenshot-canvas"),
+          img = document.getElementById("screenshot-img");
+        if (img.src) {
+          var ctx = c.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+        }
+      }
+
+      function savePoint() {
+        var name = document.getElementById("tmpl-name").value.trim();
+        if (!name) {
+          alert("请输入名称");
+          return;
+        }
+        fetch("/api/coordinates/point", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name, x: selX1, y: selY1 }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            if (d.success) {
+              addLog("坐标已保存: " + name, "log-system");
+              cancelSelection();
+              refreshResList();
+            } else addLog("保存失败", "log-error");
+          });
+      }
+
+      function saveRegion() {
+        var name = document.getElementById("tmpl-name").value.trim();
+        if (!name) {
+          alert("请输入名称");
+          return;
+        }
+        var x1 = Math.min(selX1, selX2),
+          y1 = Math.min(selY1, selY2),
+          x2 = Math.max(selX1, selX2),
+          y2 = Math.max(selY1, selY2);
+        fetch("/api/coordinates/region", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name, x1: x1, y1: y1, x2: x2, y2: y2 }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            if (d.success) {
+              addLog("区域已保存: " + name, "log-system");
+              cancelSelection();
+              refreshResList();
+            } else addLog("保存失败", "log-error");
+          });
+      }
+
+      function saveTemplate() {
+        var name = document.getElementById("tmpl-name").value.trim();
+        if (!name) {
+          alert("请输入名称");
+          return;
+        }
+        var x1 = Math.min(selX1, selX2),
+          y1 = Math.min(selY1, selY2),
+          x2 = Math.max(selX1, selX2),
+          y2 = Math.max(selY1, selY2);
+        fetch("/api/screenshot/crop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name, x1: x1, y1: y1, x2: x2, y2: y2 }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            if (d.success) {
+              addLog("图片已保存: " + name, "log-system");
+              cancelSelection();
+              refreshTemplates();
+            } else addLog("保存失败: " + (d.error || ""), "log-error");
+          });
+      }
+      function refreshTemplates() {
+        refreshResList();
+      }
+
+      function showHover(name, ev) {
+        var h = document.getElementById("tmpl-hover"),
+          img = document.getElementById("tmpl-hover-img");
+        img.src = "/api/templates/img/" + name;
+        h.style.display = "block";
+        h.style.left = ev.clientX + 15 + "px";
+        h.style.top = ev.clientY - 15 + "px";
+      }
+      function hideHover() {
+        document.getElementById("tmpl-hover").style.display = "none";
+      }
+
+      function refreshResList() {
+        fetch("/api/coordinates")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            fetch("/api/templates")
+              .then(function (r2) {
+                return r2.json();
+              })
+              .then(function (d2) {
+                fetch("/api/packages/saved")
+                  .then(function (r3) {
+                    return r3.json();
+                  })
+                  .then(function (d3) {
+                    var el = document.getElementById("res-list"),
+                      html = "";
+                    var pts = d.points || {},
+                      rgs = d.regions || {},
+                      tmpls = d2.templates || [],
+                      pkgs = d3.packages || [];
+                    var pnames = Object.keys(pts),
+                      rnames = Object.keys(rgs);
+                    if (pnames.length) {
+                      html +=
+                        "<div style='color:#8b949e;font-size:10px'>📍 坐标</div>";
+                      pnames.forEach(function (n) {
+                        var p = pts[n];
+                        html +=
+                          "<div style='font-size:11px'>📍 " +
+                          n +
+                          " (" +
+                          p.x +
+                          "," +
+                          p.y +
+                          ") <a href='#' style='color:#f85149;font-size:9px' onclick='delCoord(\"" +
+                          n +
+                          "\")'>删</a></div>";
+                      });
+                    }
+                    if (rnames.length) {
+                      html +=
+                        "<div style='color:#8b949e;font-size:10px;margin-top:6px'>📐 区域</div>";
+                      rnames.forEach(function (n) {
+                        var r = rgs[n];
+                        html +=
+                          "<div style='font-size:11px'>📐 " +
+                          n +
+                          " (" +
+                          r.x1 +
+                          "," +
+                          r.y1 +
+                          ")-(" +
+                          r.x2 +
+                          "," +
+                          r.y2 +
+                          ") <a href='#' style='color:#f85149;font-size:9px' onclick='delCoord(\"" +
+                          n +
+                          "\")'>删</a></div>";
+                      });
+                    }
+                    if (tmpls.length) {
+                      html +=
+                        "<div style='color:#8b949e;font-size:10px;margin-top:6px'>🖼 图片</div>";
+                      tmpls.forEach(function (t) {
+                        html +=
+                          "<div style='font-size:11px;cursor:pointer' onmouseenter='showHover(\"" +
+                          t.name +
+                          "\",event)' onmouseleave='hideHover()'>🖼 " +
+                          t.name +
+                          " <a href='#' style='color:#f85149;font-size:9px' onclick='deleteTemplate(\"" +
+                          t.name +
+                          "\")'>删</a></div>";
+                      });
+                    }
+                    if (pkgs.length) {
+                      html +=
+                        "<div style='color:#8b949e;font-size:10px;margin-top:6px'>📱 包名</div>";
+                      pkgs.forEach(function (p) {
+                        html +=
+                          "<div style='font-size:11px'>📱 " +
+                          p +
+                          " <a href='#' style='color:#f85149;font-size:9px' onclick='delPkg(\"" +
+                          p +
+                          "\")'>删</a></div>";
+                      });
+                    }
+                    if (
+                      !pnames.length &&
+                      !rnames.length &&
+                      !tmpls.length &&
+                      !pkgs.length
+                    )
+                      html =
+                        '<div style="color:#484f58;font-size:11px">暂无数据</div>';
+                    el.innerHTML = html;
+                  });
+              });
+          });
+      }
+
+      function delCoord(name) {
+        fetch("/api/coordinates/" + name, { method: "DELETE" }).then(
+          function () {
+            refreshResList();
+            refreshTemplates();
+          },
+        );
+      }
+      function delPkg(pkg) {
+        fetch("/api/packages/saved/" + encodeURIComponent(pkg), {
+          method: "DELETE",
+        }).then(function () {
+          refreshResList();
+        });
+      }
+      function deleteTemplate(name) {
+        fetch("/api/templates/" + name, { method: "DELETE" }).then(function () {
+          refreshTemplates();
+        });
+      }
+
+      async function refreshInstances() {
+        addLog("正在刷新实例列表...", "log-system");
+        const d = await api("POST", "/api/instances/refresh");
+        if (d?.success) {
+          addLog(
+            "实例列表已刷新 (" + d.instances.length + " 个)",
+            "log-system",
+          );
+          await refreshStatus();
+        } else addLog("刷新失败", "log-error");
+      }
+      async function refreshInstanceStatus() {
+        const d = await api("GET", "/api/instances/status");
+        if (!d || !d.instances) return;
+        const el = document.getElementById("instance-status");
+        el.innerHTML = d.instances
+          .map(function (s) {
+            const dot = s.running
+              ? '<span style="color:#3fb950">●</span>'
+              : '<span style="color:#484f58">○</span>';
+            return (
+              dot + " [" + s.index + "] " + (s.running ? "运行中" : "已停止")
+            );
+          })
+          .join(" &nbsp;");
+      }
+
+      var currentPkg = "";
+      async function getForegroundPackage() {
+        const d = await api("GET", "/api/packages/running");
+        currentPkg = d?.package || "";
+        document.getElementById("pkg-result").textContent = currentPkg || "无";
+      }
+      async function saveCurrentPackage() {
+        if (!currentPkg) {
+          addLog("请先获取前台应用", "log-warn");
+          return;
+        }
+        const d = await api("POST", "/api/packages/saved", {
+          package: currentPkg,
+        });
+        if (d?.success) {
+          addLog("已保存包名: " + currentPkg, "log-system");
+          refreshResList();
+        } else addLog("保存失败", "log-error");
+      }
+      async function searchPackages() {
+        const q = document.getElementById("pkg-search").value;
+        if (!q) return;
+        const d = await api(
+          "GET",
+          "/api/packages/list?q=" + encodeURIComponent(q),
+        );
+        document.getElementById("pkg-list").innerHTML = (d?.packages || [])
+          .map(function (p) {
+            return "<div>" + p + "</div>";
+          })
+          .join("");
+      }
+
+      function runScript(name) {
+        clearLog();
+        addLog(">>> 执行: " + name, "log-start");
+        // Check if ADB is available first
+        fetch("/api/connect", { method: "POST" })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (s) {
+            if (!s.success) {
+              addLog("ADB 未连接！请先启动模拟器", "log-error");
+              return;
+            }
+            const es = new EventSource("/api/run/" + name);
+            es.addEventListener("start", function (e) {
+              addLog("--- 开始: " + JSON.parse(e.data).script, "log-start");
+            });
+            es.addEventListener("log", function (e) {
+              const d = JSON.parse(e.data);
+              addLog(d.message, "log-" + (d.level || "info"));
+            });
+            es.addEventListener("screencap", function (e) {
+              const d = JSON.parse(e.data);
+              const img = document.getElementById("screenshot-img");
+              img.src = "data:image/png;base64," + d.image;
+              img.style.display = "block";
+              document.getElementById("screenshot-placeholder").style.display =
+                "none";
+            });
+            es.addEventListener("done", function (e) {
+              const d = JSON.parse(e.data);
+              addLog(
+                "--- 完成 (" + (d.success ? "成功" : "失败") + ")",
+                d.success ? "log-done" : "log-error",
+              );
+              es.close();
+            });
+            es.addEventListener("error", function (e) {
+              addLog("--- 执行出错", "log-error");
+              es.close();
+            });
+            es.onerror = function () {
+              es.close();
+            };
+          });
+      }
+      async function runAllTasks() {
+        clearLog();
+        addLog(">>> 执行全部每日任务", "log-start");
+        const d = await api("POST", "/api/run_all");
+        addLog(
+          d?.success ? "全部完成" : "执行失败",
+          d?.success ? "log-done" : "log-error",
+        );
+      }
+
+      async function init() {
+        await Promise.all([refreshStatus(), refreshScripts(), refreshTasks()]);
+        refreshInstanceStatus();
+        refreshResList();
+        setInterval(refreshStatus, 5000);
+        setInterval(refreshInstanceStatus, 8000);
+        setTimeout(refreshTemplates, 500);
+      }
+      init();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:5890/api/debug/ldconsole)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d\\)\")"
+    ]
+  }
+}

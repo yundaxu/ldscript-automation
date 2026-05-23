@@ -1,0 +1,20 @@
+# 模拟器脚本自助 默认配置
+ldplayer:
+  path: ""
+  index: 1
+
+adb:
+  path: ""
+
+pipeline:
+  default_timeout: 30
+  screenshot_dir: "screenshots"
+  image_dir: "images"
+
+web:
+  host: "0.0.0.0"
+  port: 5890
+
+log:
+  level: "INFO"
+  dir: "logs"

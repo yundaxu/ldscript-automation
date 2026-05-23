@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# PyInstaller
+release/build/
+release/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime
+logs/*.log
+screenshots/*.png
