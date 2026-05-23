@@ -2,11 +2,11 @@
 import os
 from flask import Flask
 
-from auto_ld._compat import get_project_root
+from auto_ld._compat import get_resource_dir
 
 
 def create_app(ld=None, adb_provider=None, loader=None, scheduler=None, worker=None, settings=None):
-    template_dir = os.path.join(get_project_root(), "templates")
+    template_dir = os.path.join(get_resource_dir(), "templates")
     app = Flask(__name__, template_folder=template_dir)
     app.config["JSON_AS_ASCII"] = False
 

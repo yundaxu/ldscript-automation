@@ -4,19 +4,33 @@ import sys
 
 
 def get_project_root() -> str:
-    """Get project root directory — works in both script and frozen mode."""
+    """Get writable data directory — exe dir in frozen, project root in script mode.
+
+    Use this for files the user/application writes to: configs, pipelines, logs.
+    """
     if getattr(sys, "frozen", False):
-        # PyInstaller: use exe directory (writable, persistent)
         return os.path.dirname(os.path.abspath(sys.executable))
     else:
-        # Script mode: _compat.py is at <root>/auto_ld/_compat.py → go up 2 levels
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def get_resource_dir() -> str:
+    """Get read-only bundled resource directory.
+
+    In frozen mode this returns sys._MEIPASS where PyInstaller extracts
+    bundled data (templates, images, models).  In script mode it is the
+    same as get_project_root().
+    """
+    if getattr(sys, "frozen", False):
+        return sys._MEIPASS
+    else:
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def get_models_dir() -> str:
     """Get easyocr models directory — bundled in frozen mode, ~/.EasyOCR otherwise."""
     if getattr(sys, "frozen", False):
-        return os.path.join(get_project_root(), "EasyOCR", "model")
+        return os.path.join(get_resource_dir(), "EasyOCR", "model")
     return os.path.join(os.path.expanduser("~"), ".EasyOCR", "model")
 
 

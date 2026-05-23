@@ -528,7 +528,7 @@ def page_setup():
 import json as _json
 import os as _os
 
-from auto_ld._compat import get_project_root
+from auto_ld._compat import get_project_root, get_resource_dir
 
 _SETTINGS_PATH = _os.path.join(get_project_root(), "configs", "settings.json")
 
@@ -786,7 +786,7 @@ def api_templates_img(name):
     from flask import send_file
     import os as _os
     # Use images/ directory (NOT templates/ which is Flask's HTML template folder)
-    base = _os.path.join(get_project_root(), "images")
+    base = _os.path.join(get_resource_dir(), "images")
     path = _os.path.join(base, f"{name}.png")
     if not _os.path.exists(path):
         return _err("Template not found", 404)

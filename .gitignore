@@ -7,6 +7,9 @@ __pycache__/
 release/build/
 release/dist/
 
+# Inno Setup output
+release/*_Setup_*.exe
+
 # IDE
 .vscode/
 .idea/
