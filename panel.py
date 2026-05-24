@@ -8,7 +8,6 @@ import json
 import os
 import sys
 import time
-import webbrowser
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -108,7 +107,7 @@ def main() -> None:
 
     url = "http://localhost:5890"
     logger.info("面板已启动: %s", url)
-    webbrowser.open(url)
+    os.startfile(url)
     app.run(host="0.0.0.0", port=5890, debug=False, threaded=True)
 
 

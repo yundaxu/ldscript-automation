@@ -13,6 +13,7 @@ release/*_Setup_*.exe
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # Runtime
 logs/*.log
