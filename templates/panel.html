@@ -579,6 +579,7 @@
       }
       function clearLog() {
         document.getElementById("log-area").innerHTML = "";
+        fetch("/api/logs/recent", { method: "DELETE" });
       }
 
       async function restoreRecentState() {

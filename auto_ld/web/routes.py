@@ -242,6 +242,13 @@ def api_logs_recent():
     return _ok({"entries": list(_log_buffer)})
 
 
+@bp.route("/api/logs/recent", methods=["DELETE"])
+def api_logs_clear():
+    """清空日志缓冲区。"""
+    _log_buffer.clear()
+    return _ok({"success": True})
+
+
 # ====================== Packages ======================
 
 @bp.route("/api/packages/running")
