@@ -259,6 +259,10 @@ def api_logs_recent():
     try:
         if not _os.path.exists(path):
             return _ok({"lines": [], "offset": 0})
+        file_size = _os.path.getsize(path)
+        # 文件被截断时，超出了前端的 offset，从头读
+        if offset > file_size:
+            offset = 0
         with open(path, "r", encoding="utf-8") as f:
             if offset > 0:
                 f.seek(offset)
