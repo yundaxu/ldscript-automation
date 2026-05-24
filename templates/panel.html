@@ -581,6 +581,37 @@
         document.getElementById("log-area").innerHTML = "";
       }
 
+      async function restoreRecentState() {
+        // 恢复最近脚本执行日志（页面刷新后）
+        const logs = await api("GET", "/api/logs/recent");
+        if (logs && logs.entries) {
+          for (var i = 0; i < logs.entries.length; i++) {
+            var evt = logs.entries[i];
+            if (evt.event === "log") {
+              addLog(
+                evt.data.message,
+                "log-" + (evt.data.level || "info"),
+              );
+            } else if (evt.event === "start") {
+              addLog(">>> 执行: " + evt.data.script, "log-start");
+            } else if (evt.event === "done") {
+              addLog(
+                "--- 完成 (" + (evt.data.success ? "成功" : "失败") + ")",
+                evt.data.success ? "log-done" : "log-error",
+              );
+            }
+          }
+        }
+        // 恢复最后一次脚本截图
+        var sc = await api("GET", "/api/screenshot/last");
+        if (sc && sc.image) {
+          var img = document.getElementById("screenshot-img");
+          img.src = "data:image/png;base64," + sc.image;
+          img.style.display = "block";
+          document.getElementById("screenshot-placeholder").style.display = "none";
+        }
+      }
+
       async function api(method, path, body) {
         const opts = {
           method,
@@ -1248,6 +1279,7 @@
         setInterval(refreshStatus, 5000);
         setInterval(refreshInstanceStatus, 8000);
         setTimeout(refreshTemplates, 500);
+        restoreRecentState();
       }
       init();
     </script>

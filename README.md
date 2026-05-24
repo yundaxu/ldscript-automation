@@ -146,4 +146,4 @@ Python · Flask · easyocr · OpenCV · NumPy · PyYAML · PyInstaller · ADB
 
 MIT License
 
-Copyright (c) 2026 墨尔本的晴空
+Copyright (c) 2026 yundaxu

@@ -3,7 +3,7 @@
 
 #define MyAppName "模拟器脚本自助"
 #define MyAppVersion "1.0"
-#define MyAppPublisher "墨尔本的晴空"
+#define MyAppPublisher "yundaxu"
 #define MyAppURL "https://github.com/yundaxu/ldscript-automation"
 #define MyAppExeName "模拟器脚本自助.exe"
 #define ModelDir GetEnv("USERPROFILE") + "\.EasyOCR\model"

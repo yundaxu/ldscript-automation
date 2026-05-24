@@ -21,6 +21,17 @@ _web_log = get_logger("Web")
 # 最近一次脚本截图缓存 (PNG bytes)
 _last_screencap: bytes | None = None
 
+# 最近日志缓冲区，页面刷新后可恢复
+_log_buffer: list[dict] = []
+_MAX_LOG_BUFFER = 200
+
+
+def _append_log_buffer(evt: dict) -> None:
+    """将 SSE 事件追加到日志缓冲区，超出上限时移除旧条目。"""
+    if len(_log_buffer) >= _MAX_LOG_BUFFER:
+        _log_buffer.pop(0)
+    _log_buffer.append(evt)
+
 
 # ====================== Helpers ======================
 
@@ -225,6 +236,12 @@ def api_screenshot_last():
     return _ok({"image": b64})
 
 
+@bp.route("/api/logs/recent")
+def api_logs_recent():
+    """返回最近脚本执行的日志缓冲区，用于页面刷新后恢复。"""
+    return _ok({"entries": list(_log_buffer)})
+
+
 # ====================== Packages ======================
 
 @bp.route("/api/packages/running")
@@ -395,6 +412,9 @@ def api_run_script(name):
             )
             return
 
+        global _log_buffer
+        _log_buffer.clear()
+
         queue: list[dict] = []
 
         class _SSEHandler(logging.Handler):
@@ -417,6 +437,10 @@ def api_run_script(name):
         root.addHandler(handler)
 
         try:
+            _append_log_buffer({
+                "event": "start",
+                "data": {"script": name},
+            })
             yield f"event: start\ndata: {json.dumps({'script': name})}\n\n"
 
             result: dict = {"success": False}
@@ -446,6 +470,7 @@ def api_run_script(name):
                         f"event: {evt['event']}\n"
                         f"data: {json.dumps(evt['data'], ensure_ascii=False)}\n\n"
                     )
+                    _append_log_buffer(evt)
                     last_idx += 1
                 time.sleep(0.1)
 
@@ -458,10 +483,19 @@ def api_run_script(name):
                     f"event: {evt['event']}\n"
                     f"data: {json.dumps(evt['data'], ensure_ascii=False)}\n\n"
                 )
+                _append_log_buffer(evt)
                 last_idx += 1
 
+            _append_log_buffer({
+                "event": "done",
+                "data": {"success": result["success"]},
+            })
             yield f"event: done\ndata: {json.dumps({'success': result['success']})}\n\n"
         except Exception as e:
+            _append_log_buffer({
+                "event": "error",
+                "data": {"error": str(e)},
+            })
             yield (
                 "event: error\n"
                 f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -547,7 +581,7 @@ _SETTINGS_DEFAULTS = {
         "instance_index": 0,
     },
     "about": {
-        "version": "1.0.0", "developer": "墨尔本的晴空",
+        "version": "1.0.0", "developer": "yundaxu",
         "description": "雷电模拟器自动化框架",
     },
 }
