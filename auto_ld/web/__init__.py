@@ -9,6 +9,7 @@ def create_app(ld=None, adb_provider=None, loader=None, scheduler=None, worker=N
     template_dir = os.path.join(get_resource_dir(), "templates")
     app = Flask(__name__, template_folder=template_dir)
     app.config["JSON_AS_ASCII"] = False
+    app.jinja_env.auto_reload = True
 
     app.config["AUTOLD_LD"] = ld
     app.config["AUTOLD_ADB_PROVIDER"] = adb_provider
