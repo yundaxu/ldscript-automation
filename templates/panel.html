@@ -274,51 +274,6 @@
         gap: 3px;
         white-space: nowrap;
       }
-      .log-area {
-        height: 28vh;
-        min-height: 100px;
-        background: #0d1117;
-        padding: 12px 16px;
-        overflow-y: auto;
-        font-family: Consolas, "Courier New", monospace;
-        font-size: 11px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-break: break-all;
-        border-top: 1px solid #21262d;
-      }
-      .logbar {
-        background: #161b22;
-        padding: 5px 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 11px;
-        border-top: 1px solid #21262d;
-      }
-      .log-info {
-        color: #58a6ff;
-      }
-      .log-warn {
-        color: #d29922;
-      }
-      .log-error {
-        color: #f85149;
-      }
-      .log-debug {
-        color: #8b949e;
-      }
-      .log-start {
-        color: #3fb950;
-        font-weight: bold;
-      }
-      .log-done {
-        color: #3fb950;
-        font-weight: bold;
-      }
-      .log-system {
-        color: #a371f7;
-      }
       .instance-status {
         font-size: 10px;
         color: #8b949e;
@@ -560,83 +515,12 @@
       </div>
     </div>
 
-    <div class="logbar">
-      <span style="color: #8b949e">运行日志</span
-      ><button class="btn sm gray" onclick="refreshLog()">刷新</button>
-    </div>
-    <div class="log-area" id="log-area"></div>
 
     <script>
       let deviceW = 1080,
         deviceH = 1920;
 
-      function addLog(msg, cls) {
-        const el = document.getElementById("log-area");
-        const d = document.createElement("div");
-        d.className = cls || "log-info";
-        d.textContent = msg;
-        el.appendChild(d);
-        el.scrollTop = el.scrollHeight;
-      }
-      var _logPollTimer = null;
-      var _lastOffset = 0;
-
-      function stopLogPoll() {
-        if (_logPollTimer) { clearInterval(_logPollTimer); _logPollTimer = null; }
-        _lastOffset = 0;
-      }
-
-      function clearLog() {
-        document.getElementById("log-area").innerHTML = "";
-        stopLogPoll();
-        fetch("/api/logs/recent", { method: "DELETE" });
-      }
-
-      function refreshLog() {
-        document.getElementById("log-area").innerHTML = "";
-        stopLogPoll();
-        restoreRecentState();
-      }
-
-      async function restoreRecentState() {
-        var stopped = false;
-
-        async function poll() {
-          var resp = await api("GET", "/api/logs/recent?offset=" + _lastOffset);
-          if (!resp || !resp.lines || resp.lines.length === 0) return;
-          for (var i = 0; i < resp.lines.length; i++) {
-            var line = resp.lines[i];
-            if (line.indexOf("<<< 执行完成") >= 0) {
-              addLog("--- " + line.replace("<<< ", ""), "log-done");
-              stopped = true;
-            } else if (line.indexOf("<<< 执行出错") >= 0) {
-              addLog("--- " + line.replace("<<< ", ""), "log-error");
-              stopped = true;
-            } else if (line.indexOf(">>> 开始执行") >= 0) {
-              addLog(line.replace(">>> ", ""), "log-start");
-            } else if (line === "[截图]") {
-              // 截图通过 SSE screencap 事件显示，文件中仅作标记
-            } else {
-              addLog(line, "log-info");
-            }
-          }
-          _lastOffset = resp.offset;
-          if (stopped) stopLogPoll();
-        }
-
-        await poll();
-        if (!stopped) {
-          _logPollTimer = setInterval(poll, 2000);
-        }
-
-        var sc = await api("GET", "/api/screenshot/last");
-        if (sc && sc.image) {
-          var img = document.getElementById("screenshot-img");
-          img.src = "data:image/png;base64," + sc.image;
-          img.style.display = "block";
-          document.getElementById("screenshot-placeholder").style.display = "none";
-        }
-      }
+      function addLog(msg, cls) {}
 
       async function api(method, path, body) {
         const opts = {
@@ -648,7 +532,6 @@
           const r = await fetch(path, opts);
           return await r.json();
         } catch (e) {
-          addLog("请求失败: " + e.message, "log-error");
           return null;
         }
       }
@@ -1243,9 +1126,6 @@
       }
 
       function runScript(name) {
-        stopLogPoll();
-        clearLog();
-        addLog(">>> 执行: " + name, "log-start");
         // Check if ADB is available first
         fetch("/api/connect", { method: "POST" })
           .then(function (r) {
@@ -1290,13 +1170,7 @@
           });
       }
       async function runAllTasks() {
-        clearLog();
-        addLog(">>> 执行全部每日任务", "log-start");
-        const d = await api("POST", "/api/run_all");
-        addLog(
-          d?.success ? "全部完成" : "执行失败",
-          d?.success ? "log-done" : "log-error",
-        );
+        await api("POST", "/api/run_all");
       }
 
       async function init() {
@@ -1306,7 +1180,6 @@
         setInterval(refreshStatus, 5000);
         setInterval(refreshInstanceStatus, 8000);
         setTimeout(refreshTemplates, 500);
-        restoreRecentState();
       }
       init();
     </script>
