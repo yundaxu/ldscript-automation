@@ -48,6 +48,9 @@ def preload_models(logger=None) -> bool:
 
     Returns True if models are ready, False if download failed.
     """
+    if not getattr(sys, "frozen", False):
+        return True  # dev mode — models managed by pip/user
+
     models_dir = get_models_dir()
     os.makedirs(models_dir, exist_ok=True)
 
