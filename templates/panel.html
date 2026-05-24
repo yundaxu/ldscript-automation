@@ -561,7 +561,8 @@
     </div>
 
     <div class="logbar">
-      <span style="color: #8b949e">运行日志</span>
+      <span style="color: #8b949e">运行日志</span
+      ><button class="btn sm gray" onclick="refreshLog()">刷新</button>
     </div>
     <div class="log-area" id="log-area"></div>
 
@@ -589,6 +590,12 @@
         document.getElementById("log-area").innerHTML = "";
         stopLogPoll();
         fetch("/api/logs/recent", { method: "DELETE" });
+      }
+
+      function refreshLog() {
+        document.getElementById("log-area").innerHTML = "";
+        stopLogPoll();
+        restoreRecentState();
       }
 
       async function restoreRecentState() {
