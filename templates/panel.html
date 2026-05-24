@@ -577,22 +577,28 @@
         el.scrollTop = el.scrollHeight;
       }
       var _logPollTimer = null;
+      var _lastLogSeq = 0;
+
+      function stopLogPoll() {
+        if (_logPollTimer) { clearInterval(_logPollTimer); _logPollTimer = null; }
+        _lastLogSeq = 0;
+      }
 
       function clearLog() {
         document.getElementById("log-area").innerHTML = "";
+        stopLogPoll();
         fetch("/api/logs/recent", { method: "DELETE" });
       }
 
       async function restoreRecentState() {
-        var lastCount = 0;
         var stopped = false;
 
         async function poll() {
-          var logs = await api("GET", "/api/logs/recent");
-          if (!logs || !logs.entries) return;
-          // 只显示上次恢复后新增的条目
-          for (var i = lastCount; i < logs.entries.length; i++) {
+          var logs = await api("GET", "/api/logs/recent?since=" + _lastLogSeq);
+          if (!logs || !logs.entries || logs.entries.length === 0) return;
+          for (var i = 0; i < logs.entries.length; i++) {
             var evt = logs.entries[i];
+            if (evt.seq > _lastLogSeq) _lastLogSeq = evt.seq;
             if (evt.event === "log") {
               addLog(evt.data.message, "log-" + (evt.data.level || "info"));
             } else if (evt.event === "start") {
@@ -608,21 +614,15 @@
               stopped = true;
             }
           }
-          lastCount = logs.entries.length;
-          if (stopped && _logPollTimer) {
-            clearInterval(_logPollTimer);
-            _logPollTimer = null;
-          }
+          if (logs.max_seq > _lastLogSeq) _lastLogSeq = logs.max_seq;
+          if (stopped) stopLogPoll();
         }
 
-        // 首次恢复
         await poll();
-        // 继续轮询（脚本可能仍在后台运行）
         if (!stopped) {
           _logPollTimer = setInterval(poll, 2000);
         }
 
-        // 恢复最后一次脚本截图
         var sc = await api("GET", "/api/screenshot/last");
         if (sc && sc.image) {
           var img = document.getElementById("screenshot-img");
@@ -1237,7 +1237,7 @@
       }
 
       function runScript(name) {
-        if (_logPollTimer) { clearInterval(_logPollTimer); _logPollTimer = null; }
+        stopLogPoll();
         clearLog();
         addLog(">>> 执行: " + name, "log-start");
         // Check if ADB is available first

@@ -23,13 +23,17 @@ _last_screencap: bytes | None = None
 
 # 最近日志缓冲区，页面刷新后可恢复
 _log_buffer: list[dict] = []
-_MAX_LOG_BUFFER = 200
+_MAX_LOG_BUFFER = 500
+_log_seq: int = 0
 
 
 def _append_log_buffer(evt: dict) -> None:
-    """将 SSE 事件追加到日志缓冲区，超出上限时移除旧条目。"""
+    """将 SSE 事件追加到日志缓冲区，附带递增序号。"""
+    global _log_seq
     if len(_log_buffer) >= _MAX_LOG_BUFFER:
         _log_buffer.pop(0)
+    _log_seq += 1
+    evt["seq"] = _log_seq
     _log_buffer.append(evt)
 
 
@@ -238,14 +242,18 @@ def api_screenshot_last():
 
 @bp.route("/api/logs/recent")
 def api_logs_recent():
-    """返回最近脚本执行的日志缓冲区，用于页面刷新后恢复。"""
-    return _ok({"entries": list(_log_buffer)})
+    """返回日志缓冲区中序号大于 since 的条目，用于页面刷新后恢复。"""
+    since = request.args.get("since", type=int, default=0)
+    entries = [e for e in _log_buffer if e.get("seq", 0) > since]
+    return _ok({"entries": entries, "max_seq": _log_seq})
 
 
 @bp.route("/api/logs/recent", methods=["DELETE"])
 def api_logs_clear():
     """清空日志缓冲区。"""
+    global _log_seq
     _log_buffer.clear()
+    _log_seq = 0
     return _ok({"success": True})
 
 
@@ -418,9 +426,6 @@ def api_run_script(name):
                 f"data: {json.dumps({'error': 'ADB not available'})}\n\n"
             )
             return
-
-        global _log_buffer
-        _log_buffer.clear()
 
         queue: list[dict] = []
 
