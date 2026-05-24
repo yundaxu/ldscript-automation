@@ -6,6 +6,7 @@
 #define MyAppPublisher "墨尔本的晴空"
 #define MyAppURL "https://github.com/yundaxu/ldscript-automation"
 #define MyAppExeName "模拟器脚本自助.exe"
+#define ModelDir GetEnv("USERPROFILE") + "\.EasyOCR\model"
 
 [Setup]
 AppId={{A8F3E5D2-7B4C-4E9A-8F1D-2C6E5A3B0D7F}
@@ -31,6 +32,9 @@ Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription
 
 [Files]
 Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#ModelDir}\craft_mlt_25k.pth"; DestDir: "{app}\EasyOCR\model"; Flags: ignoreversion
+Source: "{#ModelDir}\english_g2.pth"; DestDir: "{app}\EasyOCR\model"; Flags: ignoreversion
+Source: "{#ModelDir}\zh_sim_g2.pth"; DestDir: "{app}\EasyOCR\model"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
