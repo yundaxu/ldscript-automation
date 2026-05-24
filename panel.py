@@ -11,7 +11,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from auto_ld._compat import get_project_root
+from auto_ld._compat import get_project_root, preload_models
 from auto_ld.web import create_app
 from auto_ld.emulator.ldplayer import LDPlayer
 from auto_ld.runtime.loader import ScriptLoader
@@ -63,6 +63,9 @@ def main() -> None:
     worker = ScheduleWorker()
     worker.start()
     logger.info("定时调度器已启动")
+
+    # 预加载 OCR 模型（仅 frozen 模式首次运行需要下载）
+    preload_models(logger)
 
     # 应用启动设置
     if ld and launch_cfg.get("auto_launch_emulator"):

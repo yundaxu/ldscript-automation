@@ -29,13 +29,10 @@ def _get_reader(languages=None):
             raise ImportError(
                 "easyocr is required. Install: pip install easyocr"
             )
-    from auto_ld._compat import get_models_dir, is_frozen, ensure_models
+    from auto_ld._compat import get_models_dir
     models_dir = get_models_dir()
-    if is_frozen():
-        ensure_models()
     _reader = _easyocr.Reader(
         languages, gpu=False, model_storage_directory=models_dir,
-        download_enabled=not is_frozen(),
     )
     _reader_langs = languages
     return _reader

@@ -1,6 +1,5 @@
 """Compatibility helpers for PyInstaller frozen mode."""
 import os
-import shutil
 import sys
 
 
@@ -29,36 +28,49 @@ def get_resource_dir() -> str:
 
 
 def get_models_dir() -> str:
-    """Get easyocr models directory — writable, models copied from bundle on first use."""
+    """Get easyocr models directory — writable path under exe dir in frozen mode."""
     if getattr(sys, "frozen", False):
         return os.path.join(get_project_root(), "EasyOCR", "model")
     return os.path.join(os.path.expanduser("~"), ".EasyOCR", "model")
 
 
-def ensure_models() -> None:
-    """Copy bundled model files to writable models directory on first run (frozen only).
-
-    Bundled models are at <MEIPASS>/EasyOCR/model/ (read-only).
-    This copies them to <exe_dir>/EasyOCR/model/ (writable) so easyocr
-    can verify/use them without re-downloading.
-    """
-    if not getattr(sys, "frozen", False):
-        return
-
-    writable_dir = get_models_dir()
-    os.makedirs(writable_dir, exist_ok=True)
-
-    bundled_dir = os.path.join(get_resource_dir(), "EasyOCR", "model")
-    if not os.path.isdir(bundled_dir):
-        return
-
-    for fname in os.listdir(bundled_dir):
-        bundled = os.path.join(bundled_dir, fname)
-        target = os.path.join(writable_dir, fname)
-        if not os.path.isfile(target):
-            shutil.copy2(bundled, target)
-
-
 def is_frozen() -> bool:
     """Check if running as PyInstaller bundled executable."""
     return bool(getattr(sys, "frozen", False))
+
+
+def preload_models(logger=None) -> bool:
+    """Pre-download easyocr models at startup (frozen mode only).
+
+    Creates an easyocr Reader which auto-downloads missing model files
+    from the official URLs.  Called once at program startup so the user
+    sees download progress immediately rather than waiting on first OCR.
+
+    Returns True if models are ready, False if download failed.
+    """
+    models_dir = get_models_dir()
+    os.makedirs(models_dir, exist_ok=True)
+
+    try:
+        import easyocr
+    except ImportError:
+        if logger:
+            logger.error("easyocr 未安装，文字识别功能不可用")
+        return False
+
+    if logger:
+        logger.info("正在检查/下载 OCR 模型到 %s ...", models_dir)
+
+    try:
+        easyocr.Reader(
+            ["ch_sim", "en"], gpu=False,
+            model_storage_directory=models_dir,
+            download_enabled=True, verbose=True,
+        )
+        if logger:
+            logger.info("OCR 模型就绪")
+        return True
+    except Exception as e:
+        if logger:
+            logger.error("OCR 模型下载失败: %s", e)
+        return False

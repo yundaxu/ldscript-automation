@@ -8,14 +8,6 @@ _block_cipher = None
 # SPECPATH 是 spec 文件所在目录，项目根是其父目录
 _ROOT = _os.path.dirname(SPECPATH)
 
-# easyocr 模型文件 — 从用户目录复制到打包中
-_MODEL_DIR = _os.path.join(_os.path.expanduser("~"), ".EasyOCR", "model")
-_model_files = []
-if _os.path.exists(_MODEL_DIR):
-    for _f in _os.listdir(_MODEL_DIR):
-        _src = _os.path.join(_MODEL_DIR, _f)
-        _model_files.append((_src, _os.path.join("EasyOCR", "model", _f)))
-
 _added = [
     (_os.path.join(_ROOT, "templates"), "templates"),
     (_os.path.join(_ROOT, "configs"), "configs"),
@@ -27,7 +19,7 @@ a = Analysis(
     [_os.path.join(_ROOT, "panel.py")],
     pathex=[_ROOT],
     binaries=[],
-    datas=_added + _model_files,
+    datas=_added,
     hiddenimports=[
         "cv2",
         "numpy",
