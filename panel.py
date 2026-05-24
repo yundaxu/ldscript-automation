@@ -2,12 +2,13 @@
 
 用法:
     python panel.py
-    然后浏览器打开 http://localhost:5890
+    启动后自动打开浏览器。
 """
 import json
 import os
 import sys
 import time
+import webbrowser
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -105,7 +106,9 @@ def main() -> None:
         settings=settings,
     )
 
-    logger.info("面板已启动: http://localhost:5890")
+    url = "http://localhost:5890"
+    logger.info("面板已启动: %s", url)
+    webbrowser.open(url)
     app.run(host="0.0.0.0", port=5890, debug=False, threaded=True)
 
 

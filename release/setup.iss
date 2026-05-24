@@ -2,7 +2,7 @@
 ; 用法: 安装 Inno Setup (https://jrsoftware.org/isinfo.php) 后用 ISCC.exe 编译此文件
 
 #define MyAppName "模拟器脚本自助"
-#define MyAppVersion "1.0"
+#define MyAppVersion "1.1"
 #define MyAppPublisher "yundaxu"
 #define MyAppURL "https://github.com/yundaxu/ldscript-automation"
 #define MyAppExeName "模拟器脚本自助.exe"
@@ -20,7 +20,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=.
-OutputBaseFilename=模拟器脚本自助_Setup_v1.0
+OutputBaseFilename=模拟器脚本自助_Setup_v1.1
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

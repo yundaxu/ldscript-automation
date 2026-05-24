@@ -425,6 +425,9 @@
         <button class="btn green" id="run-btn" onclick="doRun()">
           ▶ 测试运行
         </button>
+        <button class="btn" id="stop-btn" onclick="doStop()" style="display:none;background:#da3633;border-color:#f85149;color:#fff">
+          ■ 停止
+        </button>
         <span class="save-notice" id="notice"></span>
       </div>
     </div>
@@ -564,6 +567,24 @@
       };
       let wb = [],
         cid = 0;
+      let _activeEventSource = null;
+
+      function doStop() {
+        fetch("/api/run/stop", { method: "POST" });
+        if (_activeEventSource) {
+          _activeEventSource.close();
+          _activeEventSource = null;
+        }
+        $("run-btn").textContent = "▶ 测试运行";
+        $("run-btn").disabled = false;
+        $("stop-btn").style.display = "none";
+        const l = document.createElement("div");
+        l.className = "r-err";
+        l.textContent = "■ 用户停止";
+        const out = $("run-out");
+        out.appendChild(l);
+        out.scrollTop = out.scrollHeight;
+      }
 
       function $(id) {
         return document.getElementById(id);
@@ -1496,7 +1517,18 @@
             const btn = $("run-btn");
             btn.textContent = "⏳ 运行中...";
             btn.disabled = true;
+            $("stop-btn").style.display = "inline-block";
+            function cleanup() {
+              _activeEventSource = null;
+              btn.textContent = "▶ 测试运行";
+              btn.disabled = false;
+              $("stop-btn").style.display = "none";
+            }
+            if (_activeEventSource) {
+              _activeEventSource.close();
+            }
             const es = new EventSource("/api/run/" + n);
+            _activeEventSource = es;
             es.addEventListener("log", function (e) {
               const d = JSON.parse(e.data);
               const l = document.createElement("div");
@@ -1521,8 +1553,7 @@
               out.appendChild(l);
               out.scrollTop = out.scrollHeight;
               es.close();
-              btn.textContent = "▶ 测试运行";
-              btn.disabled = false;
+              cleanup();
             });
             es.addEventListener("error", function (e) {
               const l = document.createElement("div");
@@ -1530,13 +1561,11 @@
               l.textContent = "✗ 执行出错";
               out.appendChild(l);
               es.close();
-              btn.textContent = "▶ 测试运行";
-              btn.disabled = false;
+              cleanup();
             });
             es.onerror = function () {
               es.close();
-              btn.textContent = "▶ 测试运行";
-              btn.disabled = false;
+              cleanup();
             };
           });
       }

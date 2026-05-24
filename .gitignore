@@ -17,3 +17,11 @@ release/*_Setup_*.exe
 # Runtime
 logs/*.log
 screenshots/*.png
+
+# 本地配置（每台机器不同）
+configs/settings.json
+configs/instances.json
+
+# 用户脚本和积木数据
+pipelines/*.py
+pipelines/*.blocks.json

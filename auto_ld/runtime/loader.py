@@ -3,8 +3,10 @@ import importlib.util
 import json
 import os
 import sys
+import threading
 
 from auto_ld.log import get_logger
+from auto_ld.runtime.context import ScriptStopped
 
 
 class ScriptLoader:
@@ -92,7 +94,7 @@ class ScriptLoader:
 
     def run(
         self, name: str, adb, touch, log=None, config: dict | None = None,
-        screencap_hook=None,
+        screencap_hook=None, stop_event: threading.Event | None = None,
     ) -> bool:
         """加载并执行脚本。
 
@@ -107,6 +109,7 @@ class ScriptLoader:
             log: 可选的 Logger 实例
             config: 可选的配置参数字典 (传给 ctx.config)
             screencap_hook: 截图回调 (接收 PNG bytes)
+            stop_event: 停止信号
 
         Returns:
             True 表示脚本执行成功
@@ -115,13 +118,13 @@ class ScriptLoader:
             json_path = os.path.join(self._dir, f"{name}.json")
             if os.path.exists(json_path):
                 from auto_ld.pipeline.engine import PipelineEngine
-                engine = PipelineEngine(adb, touch, screencap_hook=screencap_hook)
+                engine = PipelineEngine(adb, touch, screencap_hook=screencap_hook, stop_event=stop_event)
                 return engine.run_file(json_path)
 
             module = self.load(name)
             from auto_ld.runtime.context import ScriptContext
 
-            ctx = ScriptContext(adb, touch, log, config, screencap_hook)
+            ctx = ScriptContext(adb, touch, log, config, screencap_hook, stop_event=stop_event)
             ctx.start_timing()
 
             result = module.run(ctx)
@@ -132,6 +135,9 @@ class ScriptLoader:
                 name, elapsed, ctx.step_count(),
             )
             return result if isinstance(result, bool) else True
+        except ScriptStopped as e:
+            self._log.info("Script '%s' stopped: %s", name, e)
+            return False
         except Exception as e:
             self._log.error("Script '%s' failed: %s", name, e)
             return False

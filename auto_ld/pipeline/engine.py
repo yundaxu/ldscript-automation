@@ -7,10 +7,12 @@ MAA 框架模式参考:
 """
 import json
 import os
+import threading
 import time
 from datetime import datetime
 
 from auto_ld.log import get_logger
+from auto_ld.runtime.context import ScriptStopped
 
 SUPPORTED_ACTIONS = frozenset({
     "Click", "LongPress", "Swipe", "Wait",
@@ -43,7 +45,7 @@ class PipelineEngine:
 
     def __init__(
         self, adb, touch, screenshot_dir: str = "screenshots",
-        screencap_hook=None,
+        screencap_hook=None, stop_event: threading.Event | None = None,
     ) -> None:
         """初始化流水线引擎。
 
@@ -52,13 +54,20 @@ class PipelineEngine:
             touch: auto_ld.controller.touch.Touch 实例
             screenshot_dir: 截图保存目录
             screencap_hook: 截图回调 (接收 PNG bytes)
+            stop_event: 停止信号，设置后中断流水线执行
         """
         self._adb = adb
         self._touch = touch
         self._screenshot_dir = screenshot_dir
         self._screencap_hook = screencap_hook
+        self._stop_event = stop_event
         self._log = get_logger("Pipeline")
         os.makedirs(screenshot_dir, exist_ok=True)
+
+    def _check_stop(self) -> None:
+        """检查停止信号，若已设置则抛出 ScriptStopped。"""
+        if self._stop_event and self._stop_event.is_set():
+            raise ScriptStopped("流水线已被用户停止")
 
     def run_file(self, json_path: str) -> bool:
         """从 JSON 文件加载并执行流水线。
@@ -100,6 +109,9 @@ class PipelineEngine:
             self._run_node("Start", nodes, set())
             self._log.info("Pipeline completed: %s", name)
             return True
+        except ScriptStopped as e:
+            self._log.info("Pipeline stopped: %s — %s", name, e)
+            return False
         except Exception as e:
             self._log.error("Pipeline failed: %s — %s", name, e)
             return False
@@ -126,6 +138,7 @@ class PipelineEngine:
         action_type = action.get("type", "")
         params = action.get("param", {})
 
+        self._check_stop()
         self._log.info("  [%s] %s: %s", node_name, action_type, params)
         self._execute_action(action_type, params, node_name)
 
@@ -161,7 +174,12 @@ class PipelineEngine:
         elif action_type == "Wait":
             sec = params.get("sec", 1)
             self._log.info("  Waiting %.1fs ...", sec)
-            time.sleep(sec)
+            elapsed = 0.0
+            while elapsed < sec:
+                self._check_stop()
+                chunk = min(0.3, sec - elapsed)
+                time.sleep(chunk)
+                elapsed += chunk
         elif action_type == "StartApp":
             self._adb.start(params.get("package", ""))
             time.sleep(2)

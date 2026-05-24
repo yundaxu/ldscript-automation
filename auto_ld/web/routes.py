@@ -22,6 +22,9 @@ _web_log = get_logger("Web")
 # 最近一次脚本截图缓存 (PNG bytes)
 _last_screencap: bytes | None = None
 
+# 当前活跃脚本的停止信号
+_active_stop_event: threading.Event | None = None
+
 # 脚本执行日志输出文件，前端通过 API 读取
 def _get_script_log_path() -> str:
     from auto_ld._compat import get_project_root
@@ -73,7 +76,7 @@ def _get_worker():
 def _get_adb_touch():
     """从当前 LDPlayer 状态创建 Adb + Touch 实例。
 
-    连接设置优先级: 用户设置 > 自动检测
+    连接设置优先级: LDPlayer 实例串口 > 用户设置 > 自动检测
     """
     provider = current_app.config.get("AUTOLD_ADB_PROVIDER")
     if provider:
@@ -90,9 +93,9 @@ def _get_adb_touch():
         settings = current_app.config.get("AUTOLD_SETTINGS", {})
         conn = settings.get("connection", {})
 
-        # 优先使用设置中保存的 ADB 路径和连接地址
+        # 优先使用设置中保存的 ADB 路径，串口以当前实例为准
         adb_path = conn.get("adb_path") or ld.adb_path()
-        serial = conn.get("address") or ld.serial()
+        serial = ld.serial() or conn.get("address")
 
         adb = Adb(adb_path, serial)
         touch = Touch(adb)
@@ -442,6 +445,8 @@ def api_run_script(name):
         )
 
     def generate():
+        global _active_stop_event
+
         adb, touch = _get_adb_touch()
         if adb is None:
             yield (
@@ -451,6 +456,7 @@ def api_run_script(name):
             return
 
         _truncate_script_log()
+        _active_stop_event = threading.Event()
 
         queue: list[dict] = []
 
@@ -493,6 +499,7 @@ def api_run_script(name):
             def _run():
                 result["success"] = loader.run(
                     name, adb, touch, screencap_hook=_on_screencap,
+                    stop_event=_active_stop_event,
                 )
 
             t = threading.Thread(target=_run)
@@ -529,6 +536,7 @@ def api_run_script(name):
                 f"data: {json.dumps({'error': str(e)})}\n\n"
             )
         finally:
+            _active_stop_event = None
             root.removeHandler(handler)
 
     return Response(
@@ -540,6 +548,17 @@ def api_run_script(name):
             "Connection": "keep-alive",
         },
     )
+
+
+@bp.route("/api/run/stop", methods=["POST"])
+def api_run_stop():
+    """停止当前正在执行的脚本。"""
+    global _active_stop_event
+    if _active_stop_event is not None:
+        _active_stop_event.set()
+        _web_log.info("Stop signal sent to running script")
+        return _ok({"success": True, "message": "停止信号已发送"})
+    return _ok({"success": False, "message": "没有正在执行的脚本"})
 
 
 # ====================== Run All Tasks ======================

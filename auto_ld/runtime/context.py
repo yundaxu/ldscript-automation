@@ -4,9 +4,15 @@
 这是用户脚本与框架之间的核心接口。
 """
 import random
+import threading
 import time
 
 from auto_ld.log import get_logger
+
+
+class ScriptStopped(Exception):
+    """脚本被用户手动停止。"""
+    pass
 
 
 class ScriptContext:
@@ -29,15 +35,21 @@ class ScriptContext:
 
     def __init__(
         self, adb, touch, log=None, config: dict | None = None,
-        on_screencap=None,
+        on_screencap=None, stop_event: threading.Event | None = None,
     ) -> None:
         self.adb = adb
         self.touch = touch
         self.log = log or get_logger("Script")
         self.config = config or {}
         self._on_screencap = on_screencap
+        self._stop_event = stop_event
         self._start_time: float | None = None
         self._steps = 0
+
+    def _check_stop(self) -> None:
+        """检查停止信号，若已设置则抛出 ScriptStopped。"""
+        if self._stop_event and self._stop_event.is_set():
+            raise ScriptStopped("脚本已被用户停止")
 
     def wait(self, sec: float) -> None:
         """等待指定秒数。
@@ -47,7 +59,12 @@ class ScriptContext:
         """
         self._steps += 1
         self.log.debug("Waiting %.1fs (step #%d)", sec, self._steps)
-        time.sleep(sec)
+        elapsed = 0.0
+        while elapsed < sec:
+            self._check_stop()
+            chunk = min(0.3, sec - elapsed)
+            time.sleep(chunk)
+            elapsed += chunk
 
     def cap(self) -> bytes:
         """截取当前屏幕画面。

@@ -502,13 +502,10 @@
         <div class="section">
           <h3>
             脚本列表
-            <button
-              class="btn sm"
-              onclick="runAllTasks()"
-              style="margin-left: auto"
-            >
-              执行全部
-            </button>
+            <span class="actions">
+              <button class="btn sm red" onclick="stopScript()" style="display:none" id="btn-stop">停止</button>
+              <button class="btn sm" onclick="runAllTasks()">执行全部</button>
+            </span>
           </h3>
           <div id="script-list"><div class="empty-hint">加载中...</div></div>
         </div>
@@ -519,8 +516,21 @@
     <script>
       let deviceW = 1080,
         deviceH = 1920;
+      let _activeEventSource = null;
 
       function addLog(msg, cls) {}
+
+      async function stopScript() {
+        const d = await api("POST", "/api/run/stop");
+        if (d?.success) {
+          addLog("已发送停止信号", "log-system");
+        }
+        if (_activeEventSource) {
+          _activeEventSource.close();
+          _activeEventSource = null;
+        }
+        document.getElementById("btn-stop").style.display = "none";
+      }
 
       async function api(method, path, body) {
         const opts = {
@@ -628,6 +638,7 @@
         if (!idx) return;
         await api("POST", "/api/instance/select", { index: parseInt(idx) });
         await refreshStatus();
+        await takeScreenshot();
       }
       async function launchEmulator() {
         addLog("正在启动模拟器...", "log-system");
@@ -1136,7 +1147,17 @@
               addLog("ADB 未连接！请先启动模拟器", "log-error");
               return;
             }
+            // Close previous EventSource if any
+            if (_activeEventSource) {
+              _activeEventSource.close();
+            }
             const es = new EventSource("/api/run/" + name);
+            _activeEventSource = es;
+            document.getElementById("btn-stop").style.display = "inline-block";
+            function cleanup() {
+              _activeEventSource = null;
+              document.getElementById("btn-stop").style.display = "none";
+            }
             es.addEventListener("start", function (e) {
               addLog("--- 开始: " + JSON.parse(e.data).script, "log-start");
             });
@@ -1159,13 +1180,16 @@
                 d.success ? "log-done" : "log-error",
               );
               es.close();
+              cleanup();
             });
             es.addEventListener("error", function (e) {
               addLog("--- 执行出错", "log-error");
               es.close();
+              cleanup();
             });
             es.onerror = function () {
               es.close();
+              cleanup();
             };
           });
       }
