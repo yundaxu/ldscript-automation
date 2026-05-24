@@ -5,6 +5,7 @@
 import base64
 import json
 import logging
+import os as _os
 import threading
 import time
 
@@ -21,20 +22,30 @@ _web_log = get_logger("Web")
 # 最近一次脚本截图缓存 (PNG bytes)
 _last_screencap: bytes | None = None
 
-# 最近日志缓冲区，页面刷新后可恢复
-_log_buffer: list[dict] = []
-_MAX_LOG_BUFFER = 500
-_log_seq: int = 0
+# 脚本执行日志输出文件，前端通过 API 读取
+def _get_script_log_path() -> str:
+    from auto_ld._compat import get_project_root
+    return _os.path.join(get_project_root(), "logs", "script_output.log")
 
 
-def _append_log_buffer(evt: dict) -> None:
-    """将 SSE 事件追加到日志缓冲区，附带递增序号。"""
-    global _log_seq
-    if len(_log_buffer) >= _MAX_LOG_BUFFER:
-        _log_buffer.pop(0)
-    _log_seq += 1
-    evt["seq"] = _log_seq
-    _log_buffer.append(evt)
+def _write_script_log(line: str) -> None:
+    """追加一行文本到脚本日志文件。"""
+    try:
+        with open(_get_script_log_path(), "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def _truncate_script_log() -> None:
+    """清空脚本日志文件。"""
+    path = _get_script_log_path()
+    try:
+        _os.makedirs(_os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("")
+    except OSError:
+        pass
 
 
 # ====================== Helpers ======================
@@ -242,18 +253,26 @@ def api_screenshot_last():
 
 @bp.route("/api/logs/recent")
 def api_logs_recent():
-    """返回日志缓冲区中序号大于 since 的条目，用于页面刷新后恢复。"""
-    since = request.args.get("since", type=int, default=0)
-    entries = [e for e in _log_buffer if e.get("seq", 0) > since]
-    return _ok({"entries": entries, "max_seq": _log_seq})
+    """从脚本日志文件读取内容，支持 offset 增量读取。"""
+    offset = request.args.get("offset", type=int, default=0)
+    path = _get_script_log_path()
+    try:
+        if not _os.path.exists(path):
+            return _ok({"lines": [], "offset": 0})
+        with open(path, "r", encoding="utf-8") as f:
+            if offset > 0:
+                f.seek(offset)
+            lines = f.read().splitlines()
+            new_offset = f.tell()
+        return _ok({"lines": lines, "offset": new_offset})
+    except OSError as e:
+        return _err(str(e), 500)
 
 
 @bp.route("/api/logs/recent", methods=["DELETE"])
 def api_logs_clear():
-    """清空日志缓冲区。"""
-    global _log_seq
-    _log_buffer.clear()
-    _log_seq = 0
+    """清空脚本日志文件。"""
+    _truncate_script_log()
     return _ok({"success": True})
 
 
@@ -427,11 +446,14 @@ def api_run_script(name):
             )
             return
 
+        _truncate_script_log()
+
         queue: list[dict] = []
 
         class _SSEHandler(logging.Handler):
             def emit(self, record):
                 msg = self.format(record)
+                _write_script_log(msg)
                 queue.append({
                     "event": "log",
                     "data": {
@@ -449,10 +471,7 @@ def api_run_script(name):
         root.addHandler(handler)
 
         try:
-            _append_log_buffer({
-                "event": "start",
-                "data": {"script": name},
-            })
+            _write_script_log(f">>> 开始执行: {name}")
             yield f"event: start\ndata: {json.dumps({'script': name})}\n\n"
 
             result: dict = {"success": False}
@@ -460,6 +479,7 @@ def api_run_script(name):
             def _on_screencap(img: bytes):
                 global _last_screencap
                 _last_screencap = img
+                _write_script_log("[截图]")
                 b64 = base64.b64encode(img).decode("utf-8")
                 queue.append({
                     "event": "screencap",
@@ -482,7 +502,6 @@ def api_run_script(name):
                         f"event: {evt['event']}\n"
                         f"data: {json.dumps(evt['data'], ensure_ascii=False)}\n\n"
                     )
-                    _append_log_buffer(evt)
                     last_idx += 1
                 time.sleep(0.1)
 
@@ -495,19 +514,12 @@ def api_run_script(name):
                     f"event: {evt['event']}\n"
                     f"data: {json.dumps(evt['data'], ensure_ascii=False)}\n\n"
                 )
-                _append_log_buffer(evt)
                 last_idx += 1
 
-            _append_log_buffer({
-                "event": "done",
-                "data": {"success": result["success"]},
-            })
+            _write_script_log(f"<<< 执行完成: {'成功' if result['success'] else '失败'}")
             yield f"event: done\ndata: {json.dumps({'success': result['success']})}\n\n"
         except Exception as e:
-            _append_log_buffer({
-                "event": "error",
-                "data": {"error": str(e)},
-            })
+            _write_script_log(f"<<< 执行出错: {e}")
             yield (
                 "event: error\n"
                 f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -572,7 +584,6 @@ def page_setup():
 # ====================== Settings API ======================
 
 import json as _json
-import os as _os
 
 from auto_ld._compat import get_project_root, get_resource_dir
 

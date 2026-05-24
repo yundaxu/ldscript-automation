@@ -579,11 +579,11 @@
         el.scrollTop = el.scrollHeight;
       }
       var _logPollTimer = null;
-      var _lastLogSeq = 0;
+      var _lastOffset = 0;
 
       function stopLogPoll() {
         if (_logPollTimer) { clearInterval(_logPollTimer); _logPollTimer = null; }
-        _lastLogSeq = 0;
+        _lastOffset = 0;
       }
 
       function clearLog() {
@@ -602,27 +602,25 @@
         var stopped = false;
 
         async function poll() {
-          var logs = await api("GET", "/api/logs/recent?since=" + _lastLogSeq);
-          if (!logs || !logs.entries || logs.entries.length === 0) return;
-          for (var i = 0; i < logs.entries.length; i++) {
-            var evt = logs.entries[i];
-            if (evt.seq > _lastLogSeq) _lastLogSeq = evt.seq;
-            if (evt.event === "log") {
-              addLog(evt.data.message, "log-" + (evt.data.level || "info"));
-            } else if (evt.event === "start") {
-              addLog(">>> 执行: " + evt.data.script, "log-start");
-            } else if (evt.event === "done") {
-              addLog(
-                "--- 完成 (" + (evt.data.success ? "成功" : "失败") + ")",
-                evt.data.success ? "log-done" : "log-error"
-              );
+          var resp = await api("GET", "/api/logs/recent?offset=" + _lastOffset);
+          if (!resp || !resp.lines || resp.lines.length === 0) return;
+          for (var i = 0; i < resp.lines.length; i++) {
+            var line = resp.lines[i];
+            if (line.indexOf("<<< 执行完成") >= 0) {
+              addLog("--- " + line.replace("<<< ", ""), "log-done");
               stopped = true;
-            } else if (evt.event === "error") {
-              addLog("--- 执行出错: " + (evt.data.error || ""), "log-error");
+            } else if (line.indexOf("<<< 执行出错") >= 0) {
+              addLog("--- " + line.replace("<<< ", ""), "log-error");
               stopped = true;
+            } else if (line.indexOf(">>> 开始执行") >= 0) {
+              addLog(line.replace(">>> ", ""), "log-start");
+            } else if (line === "[截图]") {
+              // 截图通过 SSE screencap 事件显示，文件中仅作标记
+            } else {
+              addLog(line, "log-info");
             }
           }
-          if (logs.max_seq > _lastLogSeq) _lastLogSeq = logs.max_seq;
+          _lastOffset = resp.offset;
           if (stopped) stopLogPoll();
         }
 
